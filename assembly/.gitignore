@@ -1,0 +1,5 @@
+*.o
+
+# Ignore binaries
+test
+stack

@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SymbolLookupTable {
-    variables: HashMap<String, Variable>,
-    offset: i32,
-    region: usize,
-    scope: usize,
+    pub variables: HashMap<String, Variable>,
+    pub offset: i32,
+    pub region: usize,
+    pub scope: usize,
 
-    children: Vec<SymbolLookupTable>,
+    pub children: Vec<SymbolLookupTable>,
 }
 
 impl SymbolLookupTable {
@@ -58,7 +58,7 @@ impl Default for SymbolLookupTable {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable {
-    offset: i32,
+    pub offset: i32,
     pub value: Value,
 }
 
@@ -130,8 +130,8 @@ impl Builder {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NavigableSlt<'a> {
-    slt: &'a SymbolLookupTable,
-    parent: Option<&'a NavigableSlt<'a>>,
+    pub slt: &'a SymbolLookupTable,
+    pub parent: Option<&'a NavigableSlt<'a>>,
 }
 
 impl<'a> NavigableSlt<'a> {

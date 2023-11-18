@@ -83,5 +83,9 @@ pub(crate) fn get_rules() -> Vec<Rule> {
             kind: T![print],
             matches: |input| match_quote(input, "You're eyes can deceive you; don't trust them."),
         },
+        Rule {
+            kind: T![print],
+            matches: |input| match_quote(input, "You'll find I'm full of surprises."),
+        },
     ]
 }

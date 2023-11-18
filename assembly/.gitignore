@@ -1,5 +1,7 @@
 *.o
 
 # Ignore binaries
-test
-stack
+build
+
+# Ignore objs folder
+objs

@@ -18,8 +18,6 @@ pub trait Compiler {
 }
 
 pub struct State<R, W, C> {
-    current_region: usize,
-    max_region: usize,
     _reader: R,
     writer: W,
     _compiler: std::marker::PhantomData<C>,
@@ -32,8 +30,6 @@ where
 {
     pub fn new(_reader: R, writer: W) -> State<R, W, C> {
         State {
-            current_region: 0,
-            max_region: 0,
             _reader,
             writer,
             _compiler: std::marker::PhantomData,

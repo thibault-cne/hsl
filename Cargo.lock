@@ -12,6 +12,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hsl"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+ "unindent",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -57,12 +66,3 @@ name = "unindent"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
-
-[[package]]
-name = "yaul"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "regex",
- "unindent",
-]

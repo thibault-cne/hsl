@@ -1,1 +1,1 @@
-# Yet Another Useless Language (YAUL)
+# Hyper Space Lang (HSL)

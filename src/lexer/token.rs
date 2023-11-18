@@ -25,10 +25,6 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn len(&self) -> usize {
-        self.span.end - self.span.start
-    }
-
     pub fn text<'input>(&self, input: &'input str) -> &'input str {
         &input[self.span]
     }

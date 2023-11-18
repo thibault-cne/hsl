@@ -15,7 +15,7 @@ macro_rules! T {
     [print] => { $crate::lexer::token::TokenKind::Print };
     [ws] => { $crate::lexer::token::TokenKind::Whitespace };
     [err] => { $crate::lexer::token::TokenKind::Error };
-    [EOF] => { $crate::lexer::token::TokenKind::EOF };
+    [EOF] => { $crate::lexer::token::TokenKind::Eof };
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -65,7 +65,7 @@ pub enum TokenKind {
     // Misc
     Whitespace,
     Error,
-    EOF,
+    Eof,
 }
 
 impl fmt::Display for TokenKind {

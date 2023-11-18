@@ -29,7 +29,7 @@ where
 {
     /// Get the source text of a token::Token
     pub fn text(&self, token: Token) -> &'input str {
-        token.text(&self.input)
+        token.text(self.input)
     }
 
     pub(crate) fn peek(&mut self) -> TokenKind {
@@ -55,10 +55,12 @@ where
     /// This panics if the consumed token don't have the same kind as `expected`
     /// or if there is no more tokens to consume.
     pub(crate) fn consume(&mut self, expected: TokenKind) {
-        let token = self.next().expect(&format!(
-            "Expected to consume `{}`, but there was no next token.",
-            expected
-        ));
+        let token = self.next().unwrap_or_else(|| {
+            panic!(
+                "Expected to consume `{}`, but there was no next token.",
+                expected
+            )
+        });
         assert_eq!(
             token.kind, expected,
             "Expected to consume `{}`, but found `{}` instead",
@@ -142,23 +144,20 @@ where
                     self.text(literal_token)
                 };
 
-                let lit = match lit {
-                    T![int] => ast::Node::Integer(
-                        literal_text
-                            .parse()
-                            .expect(&format!("Invalid integer literal: `{}`", literal_text)),
-                    ),
+                match lit {
+                    T![int] => {
+                        ast::Node::Integer(literal_text.parse().unwrap_or_else(|_| {
+                            panic!("Invalid integer literal: `{}`", literal_text)
+                        }))
+                    }
                     T![string] => {
                         ast::Node::String(literal_text[1..(literal_text.len() - 1)].to_string())
                     }
-                    T![float] => ast::Node::Float(literal_text.parse().expect(&format!(
-                        "Invalid floating point literal: `{}`",
-                        literal_text
-                    ))),
+                    T![float] => ast::Node::Float(literal_text.parse().unwrap_or_else(|_| {
+                        panic!("Invalid floating point literal: `{}`", literal_text)
+                    })),
                     _ => unreachable!(),
-                };
-
-                lit
+                }
             }
             T![ident] => {
                 let name = {

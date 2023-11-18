@@ -110,17 +110,20 @@ impl Builder {
     }
 
     pub fn region(&mut self) -> SymbolLookupTable {
-        let mut new = SymbolLookupTable::default();
-        new.region = self.region_count;
+        let new = SymbolLookupTable {
+            region: self.region_count,
+            ..Default::default()
+        };
         self.region_count += 1;
         new
     }
 
     pub fn new_region(&mut self, parent: &mut SymbolLookupTable) {
-        let mut new = SymbolLookupTable::default();
-
-        new.region = self.region_count;
-        new.scope = parent.scope + 1;
+        let new = SymbolLookupTable {
+            region: self.region_count,
+            scope: parent.scope + 1,
+            ..Default::default()
+        };
 
         parent.children.push(new);
 
@@ -146,15 +149,15 @@ impl<'a> NavigableSlt<'a> {
     pub fn find_variable(&self, name: &str) -> Option<&Variable> {
         match self.slt.get_variable(name) {
             Some(var) => Some(var),
-            None => self.parent.map(|p| p.find_variable(name)).flatten(),
+            None => self.parent.and_then(|p| p.find_variable(name)),
         }
     }
 }
 
-impl<'a> Into<NavigableSlt<'a>> for &'a SymbolLookupTable {
-    fn into(self) -> NavigableSlt<'a> {
+impl<'a> From<&'a SymbolLookupTable> for NavigableSlt<'a> {
+    fn from(value: &'a SymbolLookupTable) -> Self {
         NavigableSlt {
-            slt: self,
+            slt: value,
             parent: None,
         }
     }

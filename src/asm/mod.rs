@@ -9,11 +9,11 @@ pub use macos::MacOsARM;
 
 pub trait Compiler {
     fn new() -> Self;
-    fn evaluate_node<'n, R: BufRead, W: Write, C: Compiler>(
+    fn evaluate_node<R: BufRead, W: Write, C: Compiler>(
         &mut self,
         ast: &Node,
         state: &mut State<R, W, C>,
-        slt: &NavigableSlt<'n>
+        slt: &NavigableSlt<'_>,
     ) -> Result<(), String>;
 }
 
@@ -37,11 +37,11 @@ where
     }
 }
 
-pub fn evaluate<'n, R, W, C: Compiler>(
+pub fn evaluate<R, W, C: Compiler>(
     ast: Vec<Node>,
     reader: R,
     writer: W,
-    slt: &NavigableSlt<'n>,
+    slt: &NavigableSlt<'_>,
     mut compiler: C,
 ) -> Result<(), String>
 where

@@ -17,22 +17,18 @@ impl Compiler for MacOsARM {
         }
     }
 
-    fn evaluate_node<'n, R: BufRead, W: Write, C: Compiler>(
+    fn evaluate_node<R: BufRead, W: Write, C: Compiler>(
         &mut self,
         ast: &crate::parser::ast::Node,
         state: &mut State<R, W, C>,
-        slt: &NavigableSlt<'n>,
+        slt: &NavigableSlt<'_>,
     ) -> Result<(), String> {
         match ast {
             Node::DeclareLiteral(name, value) => {
                 // TODO: add the value to the stack
                 let variable = slt.find_variable(name).unwrap();
-                write!(
-                    state.writer,
-                    "\t// Pushing variable {} to the stack\n",
-                    name
-                )
-                .map_err(|e| e.to_string())?;
+                writeln!(state.writer, "\t// Pushing variable {} to the stack", name)
+                    .map_err(|e| e.to_string())?;
                 match &variable.value {
                     crate::parser::slt::Value::String(s) => {
                         load_string(&mut state.writer, name, "x8");
@@ -56,7 +52,7 @@ impl Compiler for MacOsARM {
                 Ok(())
             }
             Node::Main(statements) => {
-                write!(state.writer, "{}", ".global _start\n.align 2\n_start:\n")
+                writeln!(state.writer, ".global _start\n.align 2\n_start:")
                     .map_err(|x| x.to_string())?;
                 stp(&mut state.writer, "x29", "lr", "sp", Some(Index::pre(-16)));
 
@@ -76,16 +72,15 @@ impl Compiler for MacOsARM {
 
                 ldp(&mut state.writer, "x29", "lr", "sp", Some(Index::post(16)));
 
-                write!(
+                writeln!(
                     state.writer,
-                    "{}",
-                    "\n\tmov     x0, #0\n\tmov     x16, #1\n\tsvc     0\n"
+                    "\n\tmov     x0, #0\n\tmov     x16, #1\n\tsvc     0"
                 )
                 .map_err(|x| x.to_string())?;
 
-                write!(state.writer, ".data\n",).map_err(|x| x.to_string())?;
+                writeln!(state.writer, ".data").map_err(|x| x.to_string())?;
                 for (name, s) in self.string_literals.iter() {
-                    write!(state.writer, "\t{}:      .asciz  \"{}\"\n", name, s)
+                    writeln!(state.writer, "\t{}:      .asciz  \"{}\"", name, s)
                         .map_err(|x| x.to_string())?;
                 }
                 Ok(())
@@ -126,7 +121,7 @@ impl Compiler for MacOsARM {
 
                 // TODO: just call the printf function as everything must be
                 // in the stack
-                write!(state.writer, "\tbl _printf\n").expect("writer error");
+                writeln!(state.writer, "\tbl _printf").expect("writer error");
                 add(&mut state.writer, "sp", "sp", "0x10");
                 Ok(())
             }
@@ -136,101 +131,96 @@ impl Compiler for MacOsARM {
 }
 
 fn load_string<W: Write>(writer: &mut W, name: &str, register: &str) {
-    write!(writer, "\tadrp {}, {}@PAGE\n", register, name).expect("writer error");
-    write!(
-        writer,
-        "\tadd {}, {}, {}@PAGEOFF\n",
-        register, register, name
-    )
-    .expect("writer error");
+    writeln!(writer, "\tadrp {}, {}@PAGE", register, name).expect("writer error");
+    writeln!(writer, "\tadd {}, {}, {}@PAGEOFF", register, register, name).expect("writer error");
 }
 
 fn str<W: Write>(writer: &mut W, src: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => write!(writer, "\tstr {}, [{}, #{}]!\n", src, dst, index.offset)
+            Position::Pre => writeln!(writer, "\tstr {}, [{}, #{}]!", src, dst, index.offset)
                 .expect("writer error"),
-            Position::Post => write!(writer, "\tstr {}, [{}], #{}\n", src, dst, index.offset)
+            Position::Post => writeln!(writer, "\tstr {}, [{}], #{}", src, dst, index.offset)
                 .expect("writer error"),
-            Position::Offset => write!(writer, "\tstr {}, [{}, #{}]\n", src, dst, index.offset)
+            Position::Offset => writeln!(writer, "\tstr {}, [{}, #{}]", src, dst, index.offset)
                 .expect("writer error"),
         },
-        None => write!(writer, "\tstr {}, [{}]\n", src, dst).expect("writer error"),
+        None => writeln!(writer, "\tstr {}, [{}]", src, dst).expect("writer error"),
     }
 }
 
 fn stp<W: Write>(writer: &mut W, src1: &str, src2: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => write!(
+            Position::Pre => writeln!(
                 writer,
-                "\tstp {}, {}, [{}, #{}]!\n",
+                "\tstp {}, {}, [{}, #{}]!",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
-            Position::Post => write!(
+            Position::Post => writeln!(
                 writer,
-                "\tstp {}, {}, [{}], #{}\n",
+                "\tstp {}, {}, [{}], #{}",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
-            Position::Offset => write!(
+            Position::Offset => writeln!(
                 writer,
-                "\tstp {}, {}, [{}, #{}]\n",
+                "\tstp {}, {}, [{}, #{}]",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
         },
-        None => write!(writer, "\tstp {}, {}, [{}]\n", src1, src2, dst).expect("writer error"),
+        None => writeln!(writer, "\tstp {}, {}, [{}]", src1, src2, dst).expect("writer error"),
     }
 }
 
 fn ldr<W: Write>(writer: &mut W, src: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => write!(writer, "\tldr {}, [{}, #{}]!\n", dst, src, index.offset)
+            Position::Pre => writeln!(writer, "\tldr {}, [{}, #{}]!", dst, src, index.offset)
                 .expect("writer error"),
-            Position::Post => write!(writer, "\tldr {}, [{}], #{}\n", dst, src, index.offset)
+            Position::Post => writeln!(writer, "\tldr {}, [{}], #{}", dst, src, index.offset)
                 .expect("writer error"),
-            Position::Offset => write!(writer, "\tldr {}, [{}, #{}]\n", dst, src, index.offset)
+            Position::Offset => writeln!(writer, "\tldr {}, [{}, #{}]", dst, src, index.offset)
                 .expect("writer error"),
         },
-        None => write!(writer, "\tldr {}, [{}]\n", dst, src).expect("writer error"),
+        None => writeln!(writer, "\tldr {}, [{}]", dst, src).expect("writer error"),
     }
 }
 
 fn ldp<W: Write>(writer: &mut W, src1: &str, src2: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => write!(
+            Position::Pre => writeln!(
                 writer,
-                "\tldp {}, {}, [{}, #{}]!\n",
+                "\tldp {}, {}, [{}, #{}]!",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
-            Position::Post => write!(
+            Position::Post => writeln!(
                 writer,
-                "\tldp {}, {}, [{}], #{}\n",
+                "\tldp {}, {}, [{}], #{}",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
-            Position::Offset => write!(
+            Position::Offset => writeln!(
                 writer,
-                "\tldp {}, {}, [{}, #{}]\n",
+                "\tldp {}, {}, [{}, #{}]",
                 src1, src2, dst, index.offset
             )
             .expect("writer error"),
         },
-        None => write!(writer, "\tldp {}, {}, [{}]\n", src1, src2, dst).expect("writer error"),
+        None => writeln!(writer, "\tldp {}, {}, [{}]", src1, src2, dst).expect("writer error"),
     }
 }
 
 fn mov<W: Write>(writer: &mut W, dst: &str, value: &str) {
-    write!(writer, "\tmov {}, {}\n", dst, value).expect("writer error");
+    writeln!(writer, "\tmov {}, {}", dst, value).expect("writer error");
 }
 
 fn add<W: Write>(writer: &mut W, dst: &str, src1: &str, src2: &str) {
-    write!(writer, "\tadd {}, {}, {}\n", dst, src1, src2).expect("writer error");
+    writeln!(writer, "\tadd {}, {}, {}", dst, src1, src2).expect("writer error");
 }
 
 struct Index {

@@ -16,7 +16,7 @@ pub(crate) struct Rule {
 }
 
 fn match_quote(input: &str, quote: &str) -> Option<usize> {
-    input.starts_with(quote).then(|| quote.len())
+    input.starts_with(quote).then_some(quote.len())
 }
 
 fn match_regex(input: &str, r: &Regex) -> Option<usize> {

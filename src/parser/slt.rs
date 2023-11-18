@@ -18,25 +18,25 @@ impl SymbolLookupTable {
     pub fn add_float(&mut self, name: &str, f: f32) {
         self.variables
             .insert(name.to_string(), Variable::float(f, self.offset));
-        self.offset += 16;
+        self.offset -= 16;
     }
 
     pub fn add_string(&mut self, name: &str, s: String) {
         self.variables
             .insert(name.to_string(), Variable::string(s, self.offset));
-        self.offset += 16;
+        self.offset -= 16;
     }
 
     pub fn add_integer(&mut self, name: &str, i: u32) {
         self.variables
             .insert(name.to_string(), Variable::integer(i, self.offset));
-        self.offset += 16;
+        self.offset -= 16;
     }
 
     pub fn add_boolean(&mut self, name: &str, b: bool) {
         self.variables
             .insert(name.to_string(), Variable::boolean(b, self.offset));
-        self.offset += 16;
+        self.offset -= 16;
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {

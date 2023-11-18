@@ -55,6 +55,7 @@ impl Compiler for MacOsARM {
                 writeln!(state.writer, ".global _start\n.align 2\n_start:")
                     .map_err(|x| x.to_string())?;
                 stp(&mut state.writer, "x29", "lr", "sp", Some(Index::pre(-16)));
+                mov(&mut state.writer, "x29", "sp");
 
                 let child = slt.childs().next().unwrap();
 
@@ -67,7 +68,7 @@ impl Compiler for MacOsARM {
                     &mut state.writer,
                     "sp",
                     "sp",
-                    &format!("0x{:x}", stack_size),
+                    &format!("{:#02x}", stack_size),
                 );
 
                 ldp(&mut state.writer, "x29", "lr", "sp", Some(Index::post(16)));
@@ -95,9 +96,9 @@ impl Compiler for MacOsARM {
                             crate::parser::slt::Value::String(_) => {
                                 ldr(
                                     &mut state.writer,
-                                    "sp",
+                                    "x29",
                                     "x8",
-                                    Some(Index::offset(variable.offset.abs())),
+                                    Some(Index::offset(variable.offset)),
                                 );
                                 str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
                                 "str_format"
@@ -105,9 +106,9 @@ impl Compiler for MacOsARM {
                             crate::parser::slt::Value::Integer(_) => {
                                 ldr(
                                     &mut state.writer,
-                                    "sp",
+                                    "x29",
                                     "x8",
-                                    Some(Index::offset(variable.offset.abs())),
+                                    Some(Index::offset(variable.offset)),
                                 );
                                 str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
                                 "int_format"
@@ -138,11 +139,11 @@ fn load_string<W: Write>(writer: &mut W, name: &str, register: &str) {
 fn str<W: Write>(writer: &mut W, src: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => writeln!(writer, "\tstr {}, [{}, #{}]!", src, dst, index.offset)
+            Position::Pre => writeln!(writer, "\tstr {}, [{}, {}]!", src, dst, index.format_offset())
                 .expect("writer error"),
-            Position::Post => writeln!(writer, "\tstr {}, [{}], #{}", src, dst, index.offset)
+            Position::Post => writeln!(writer, "\tstr {}, [{}], {}", src, dst, index.format_offset())
                 .expect("writer error"),
-            Position::Offset => writeln!(writer, "\tstr {}, [{}, #{}]", src, dst, index.offset)
+            Position::Offset => writeln!(writer, "\tstr {}, [{}, {}]", src, dst, index.format_offset())
                 .expect("writer error"),
         },
         None => writeln!(writer, "\tstr {}, [{}]", src, dst).expect("writer error"),
@@ -154,20 +155,20 @@ fn stp<W: Write>(writer: &mut W, src1: &str, src2: &str, dst: &str, index: Optio
         Some(index) => match index.position {
             Position::Pre => writeln!(
                 writer,
-                "\tstp {}, {}, [{}, #{}]!",
-                src1, src2, dst, index.offset
+                "\tstp {}, {}, [{}, {}]!",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
             Position::Post => writeln!(
                 writer,
-                "\tstp {}, {}, [{}], #{}",
-                src1, src2, dst, index.offset
+                "\tstp {}, {}, [{}], {}",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
             Position::Offset => writeln!(
                 writer,
-                "\tstp {}, {}, [{}, #{}]",
-                src1, src2, dst, index.offset
+                "\tstp {}, {}, [{}, {}]",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
         },
@@ -178,11 +179,11 @@ fn stp<W: Write>(writer: &mut W, src1: &str, src2: &str, dst: &str, index: Optio
 fn ldr<W: Write>(writer: &mut W, src: &str, dst: &str, index: Option<Index>) {
     match index {
         Some(index) => match index.position {
-            Position::Pre => writeln!(writer, "\tldr {}, [{}, #{}]!", dst, src, index.offset)
+            Position::Pre => writeln!(writer, "\tldr {}, [{}, {}]!", dst, src, index.format_offset())
                 .expect("writer error"),
-            Position::Post => writeln!(writer, "\tldr {}, [{}], #{}", dst, src, index.offset)
+            Position::Post => writeln!(writer, "\tldr {}, [{}], {}", dst, src, index.format_offset())
                 .expect("writer error"),
-            Position::Offset => writeln!(writer, "\tldr {}, [{}, #{}]", dst, src, index.offset)
+            Position::Offset => writeln!(writer, "\tldr {}, [{}, {}]", dst, src, index.format_offset())
                 .expect("writer error"),
         },
         None => writeln!(writer, "\tldr {}, [{}]", dst, src).expect("writer error"),
@@ -194,20 +195,20 @@ fn ldp<W: Write>(writer: &mut W, src1: &str, src2: &str, dst: &str, index: Optio
         Some(index) => match index.position {
             Position::Pre => writeln!(
                 writer,
-                "\tldp {}, {}, [{}, #{}]!",
-                src1, src2, dst, index.offset
+                "\tldp {}, {}, [{}, {}]!",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
             Position::Post => writeln!(
                 writer,
-                "\tldp {}, {}, [{}], #{}",
-                src1, src2, dst, index.offset
+                "\tldp {}, {}, [{}], {}",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
             Position::Offset => writeln!(
                 writer,
-                "\tldp {}, {}, [{}, #{}]",
-                src1, src2, dst, index.offset
+                "\tldp {}, {}, [{}, {}]",
+                src1, src2, dst, index.format_offset()
             )
             .expect("writer error"),
         },
@@ -247,6 +248,14 @@ impl Index {
         Index {
             offset,
             position: Position::Post,
+        }
+    }
+
+    fn format_offset(&self) -> String {
+        if self.offset < 0 {
+            format!("-{:#02x}", self.offset.abs())
+        } else {
+            format!("{:#02x}", self.offset.abs())
         }
     }
 }

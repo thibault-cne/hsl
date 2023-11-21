@@ -127,7 +127,7 @@ mod tests {
         let input = "$$$$$$+a";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize();
-        assert_tokens!(tokens, [T![err], T![EOF]]);
+        assert_tokens!(tokens, [T![err], T![ident], T![EOF]]);
     }
 
     #[test]

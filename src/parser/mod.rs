@@ -4,7 +4,11 @@ use crate::{
 };
 
 pub(crate) mod ast;
+pub(crate) mod expression;
+pub(crate) mod item;
+pub mod literal;
 pub(crate) mod slt;
+pub(crate) mod statement;
 
 pub struct Parser<'input, I>
 where
@@ -68,7 +72,7 @@ where
         );
     }
 
-    pub(crate) fn parse(&mut self) -> ast::Node {
+    pub(crate) fn parse(&mut self) -> ast::Item {
         // TODO: parse functions declaration before
         while !self.at(T![start]) {
             self.next();
@@ -77,13 +81,13 @@ where
 
         let mut body = Vec::new();
         while !self.at(T![end]) {
-            body.push(self.build_ast());
+            body.push(self.statement());
         }
 
         self.consume(T![end]);
         self.consume(T![EOF]);
 
-        ast::Node::Main(body)
+        ast::Item::Main { body }
     }
 }
 
@@ -108,66 +112,6 @@ impl<'input> Iterator for TokenIter<'input> {
             if !matches!(next_token.kind, T![ws] | T![comment]) {
                 return Some(next_token);
             }
-        }
-    }
-}
-
-impl<'input, I> Parser<'input, I>
-where
-    I: Iterator<Item = Token>,
-{
-    pub(crate) fn build_ast(&mut self) -> ast::Node {
-        match self.peek() {
-            T![let] => {
-                self.consume(T![let]);
-                let ident = self.next().expect("Expected an identifier after `let`");
-                assert_eq!(
-                    ident.kind,
-                    T![ident],
-                    "Expected identifier after `let`, but found `{}`",
-                    ident.kind
-                );
-                let var_name = self.text(ident).to_string();
-                self.consume(T![init]);
-                let value = self.build_ast();
-                ast::Node::DeclareLiteral(var_name, Box::new(value))
-            }
-            T![print] => {
-                self.consume(T![print]);
-                let arg = self.build_ast();
-
-                ast::Node::Print(Box::new(arg))
-            }
-            lit @ T![string] | lit @ T![int] | lit @ T![float] => {
-                let literal_text = {
-                    let literal_token = self.next().unwrap();
-                    self.text(literal_token)
-                };
-
-                match lit {
-                    T![int] => {
-                        ast::Node::Integer(literal_text.parse().unwrap_or_else(|_| {
-                            panic!("Invalid integer literal: `{}`", literal_text)
-                        }))
-                    }
-                    T![string] => {
-                        ast::Node::String(literal_text[1..(literal_text.len() - 1)].to_string())
-                    }
-                    T![float] => ast::Node::Float(literal_text.parse().unwrap_or_else(|_| {
-                        panic!("Invalid floating point literal: `{}`", literal_text)
-                    })),
-                    _ => unreachable!(),
-                }
-            }
-            T![ident] => {
-                let name = {
-                    let ident_token = self.next().unwrap();
-                    self.text(ident_token)
-                };
-
-                ast::Node::Identifier(name.to_string())
-            }
-            kind => panic!("Unknown start of expression: `{}`", kind),
         }
     }
 }

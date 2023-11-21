@@ -1,35 +1,58 @@
-use super::slt::{Builder, SymbolLookupTable};
-
 #[derive(Debug, Clone, PartialEq)]
-pub enum Node {
-    DeclareLiteral(String, Box<Node>),
-    Print(Box<Node>),
-    Main(Vec<Node>),
-    Float(f32),
-    Integer(u32),
-    String(String),
-    Boolean(bool),
-    Identifier(String),
-    Noop,
+pub enum Expr {
+    Literal(Lit),
+    Ident(String),
+    Op { op: Op, value: Lit },
 }
 
-impl Node {
-    pub fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
-        match self {
-            Node::DeclareLiteral(name, node) => match &**node {
-                Node::Float(f) => slt.add_float(name, *f),
-                Node::String(s) => slt.add_string(name, s.to_string()),
-                Node::Integer(i) => slt.add_integer(name, *i),
-                Node::Boolean(b) => slt.add_boolean(name, *b),
-                _ => (),
-            },
-            Node::Main(nodes) => {
-                builder.new_region(slt);
-                for node in nodes {
-                    node.visit(builder, slt.last_children_mut().unwrap());
-                }
-            }
-            _ => (),
+#[derive(Debug, Clone, PartialEq)]
+pub enum Op {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Lit {
+    Int(u32),
+    Str(String),
+    Bool(bool),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Stmt {
+    Let {
+        var_name: String,
+        value: Box<Expr>,
+    },
+    Assignment {
+        var_name: Box<Expr>,
+        initial_value: Box<Expr>,
+        operations: Vec<Expr>,
+    },
+    Print {
+        value: Box<Expr>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Item {
+    Main { body: Vec<Stmt> },
+}
+
+impl TryFrom<crate::lexer::token::TokenKind> for Op {
+    type Error = ();
+
+    fn try_from(value: crate::lexer::token::TokenKind) -> Result<Self, Self::Error> {
+        match value {
+            T![add] => Ok(Self::Add),
+            T![sub] => Ok(Self::Sub),
+            T![div] => Ok(Self::Div),
+            T![mul] => Ok(Self::Mul),
+            T![mod] => Ok(Self::Mod),
+            _ => Err(()),
         }
     }
 }

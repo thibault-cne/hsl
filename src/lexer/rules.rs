@@ -5,8 +5,6 @@ use crate::lexer::token::TokenKind;
 lazy_static! {
     static ref STRING_REGEX: Regex = Regex::new(r#"^"((\\"|\\\\)|[^\\"])*""#).unwrap();
     static ref COMMENT_REGEX: Regex = Regex::new(r#"^//[^\n]*\n"#).unwrap();
-    static ref FLOAT_REGEX: Regex =
-        Regex::new(r#"^((\d+(\.\d+)?)|(\.\d+))([Ee](\+|-)?\d+)?"#).unwrap();
     static ref IDENTIFIER_REGEX: Regex = Regex::new(r##"^([A-Za-z]|_)([A-Za-z]|_|\d)*"##).unwrap();
 }
 
@@ -76,16 +74,57 @@ pub(crate) fn get_rules() -> Vec<Rule> {
             matches: |input| match_regex(input, &IDENTIFIER_REGEX),
         },
         Rule {
-            kind: T![float],
-            matches: |input| match_regex(input, &FLOAT_REGEX),
-        },
-        Rule {
             kind: T![print],
             matches: |input| match_quote(input, "You're eyes can deceive you; don't trust them."),
         },
         Rule {
             kind: T![print],
             matches: |input| match_quote(input, "You'll find I'm full of surprises."),
+        },
+        Rule {
+            kind: T![bool],
+            matches: |input| match_quote(input, "From a certain point of view."),
+        },
+        Rule {
+            kind: T![bool],
+            matches: |input| match_quote(input, "That's impossible!"),
+        },
+        Rule {
+            kind: T![assign_start],
+            matches: |input| match_quote(input, "What a piece of junk!"),
+        },
+        Rule {
+            kind: T![assign_end],
+            matches: |input| match_quote(input, "The garbage will do."),
+        },
+        Rule {
+            kind: T![set],
+            matches: |input| match_quote(input, "I am your father."),
+        },
+        Rule {
+            kind: T![add],
+            matches: |input| {
+                match_quote(
+                    input,
+                    "Your lightsabers will make a fine addition to my collection.",
+                )
+            },
+        },
+        Rule {
+            kind: T![sub],
+            matches: |input| match_quote(input, "Proceed with the countdown."),
+        },
+        Rule {
+            kind: T![mul],
+            matches: |input| match_quote(input, "There's too many of them!"),
+        },
+        Rule {
+            kind: T![div],
+            matches: |input| match_quote(input, "Not to worry, we are still flying half a ship."),
+        },
+        Rule {
+            kind: T![mod],
+            matches: |input| match_quote(input, "Never tell me the odds!"),
         },
     ]
 }

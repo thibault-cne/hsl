@@ -5,14 +5,21 @@ macro_rules! T {
     [string] => { $crate::lexer::token::TokenKind::String };
     [comment] => { $crate::lexer::token::TokenKind::Comment };
     [int] => { $crate::lexer::token::TokenKind::Int };
-    [float] => { $crate::lexer::token::TokenKind::Float };
+    [bool] => { $crate::lexer::token::TokenKind::Boolean };
     [ident] => { $crate::lexer::token::TokenKind::Identifier };
     [let] => { $crate::lexer::token::TokenKind::KeywordLet };
     [init] => { $crate::lexer::token::TokenKind::KeywordInit };
-    [arg] => { $crate::lexer::token::TokenKind::PassArgument };
     [start] => { $crate::lexer::token::TokenKind::BeginMain };
     [end] => { $crate::lexer::token::TokenKind::EndMain };
     [print] => { $crate::lexer::token::TokenKind::Print };
+    [assign_start] => { $crate::lexer::token::TokenKind::AssignValueStart };
+    [assign_end] => { $crate::lexer::token::TokenKind::AssignValueEnd };
+    [set] => { $crate::lexer::token::TokenKind::SetValue };
+    [add] => { $crate::lexer::token::TokenKind::Add };
+    [sub] => { $crate::lexer::token::TokenKind::Substract };
+    [mul] => { $crate::lexer::token::TokenKind::Multiply };
+    [div] => { $crate::lexer::token::TokenKind::Divide };
+    [mod] => { $crate::lexer::token::TokenKind::Modulus };
     [ws] => { $crate::lexer::token::TokenKind::Whitespace };
     [err] => { $crate::lexer::token::TokenKind::Error };
     [EOF] => { $crate::lexer::token::TokenKind::Eof };
@@ -52,13 +59,22 @@ pub enum TokenKind {
     String,
     Comment,
     Int,
-    Float,
+    Boolean,
     Identifier,
     KeywordLet,
     KeywordInit,
     // Functions
     Print,
-    PassArgument,
+    // Assign values block
+    AssignValueStart,
+    AssignValueEnd,
+    SetValue,
+    // Operations
+    Add,
+    Substract,
+    Multiply,
+    Divide,
+    Modulus,
     // Main delimiter
     BeginMain,
     EndMain,
@@ -77,14 +93,21 @@ impl fmt::Display for TokenKind {
                 T![string] => "String",
                 T![comment] => "Comment",
                 T![int] => "Int",
-                T![float] => "Float",
+                T![bool] => "Boolean",
                 T![ident] => "Identifier",
                 T![let] => "Let",
                 T![init] => "Initial value",
-                T![arg] => "PassArgument",
-                T![start] => "<main start>",
-                T![end] => "<main end>",
+                T![start] => "Main start",
+                T![end] => "Main end",
                 T![print] => "<print>",
+                T![assign_start] => "Assign value start",
+                T![assign_end] => "Assign value end",
+                T![set] => "Set value",
+                T![add] => "Addition",
+                T![sub] => "Substraction",
+                T![mul] => "Multiplication",
+                T![div] => "Division",
+                T![mod] => "Mudulus",
                 T![ws] => "<ws>",
                 T![err] => "<?>",
                 T![EOF] => "<EOF>",

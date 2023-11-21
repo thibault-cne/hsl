@@ -24,7 +24,6 @@ impl<'input> Lexer<'input> {
     }
 
     fn valid_token(&mut self, input: &str) -> Option<Token> {
-        // TODO
         let next = input.chars().next().unwrap();
         let (len, kind) = if next.is_whitespace() {
             (
@@ -81,6 +80,7 @@ impl<'input> Lexer<'input> {
             .unwrap_or_else(|| self.invalid_token(input))
     }
 
+    #[cfg(test)]
     pub fn tokenize(&mut self) -> Vec<Token> {
         self.collect()
     }

@@ -18,25 +18,6 @@ _start:
 	adrp x8, first_order@PAGE
 	add x8, x8, first_order@PAGEOFF
 	str x8, [sp, -0x10]!
-	// Pushing variable a_boolean to the stack
-	mov x8, #0
-	str x8, [sp, -0x10]!
-
-	// Start operations
-	mov x8, 0x5
-	add x8, x8, 0x1
-	sub x8, x8, 0x4
-	mov x9, 0xa
-	mul x8, x8, x9
-	mov x9, 0x4
-	sdiv x8, x8, x9
-	mov x9, 0x2
-	sdiv x8, x8, x9
-	add x8, x8, 0x3
-	str x8, [x29, -0x10]
-
-	//End operations
-
 	ldr x8, [x29, -0x40]
 	str x8, [sp, -0x10]!
 	adrp x0, str_format@PAGE
@@ -61,7 +42,7 @@ _start:
 	add x0, x0, str_format@PAGEOFF
 	bl _printf
 	add sp, sp, 0x10
-	add sp, sp, 0x50
+	add sp, sp, 0x40
 	ldp x29, lr, [sp], 0x10
 
 	mov     x0, #0

@@ -15,12 +15,6 @@ impl SymbolLookupTable {
         self.children.last_mut()
     }
 
-    pub fn add_float(&mut self, name: &str, f: f32) {
-        self.variables
-            .insert(name.to_string(), Variable::float(f, self.offset));
-        self.offset -= 16;
-    }
-
     pub fn add_string(&mut self, name: &str, s: String) {
         self.variables
             .insert(name.to_string(), Variable::string(s, self.offset));
@@ -77,13 +71,6 @@ impl Variable {
         }
     }
 
-    fn float(f: f32, offset: i32) -> Variable {
-        Variable {
-            offset,
-            value: Value::Float(f),
-        }
-    }
-
     fn string(s: String, offset: i32) -> Variable {
         Variable {
             offset,
@@ -95,7 +82,6 @@ impl Variable {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     String(String),
-    Float(f32),
     Integer(u32),
     Boolean(bool),
 }

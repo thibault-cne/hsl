@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 
 use super::{ast, Parser};
 
@@ -6,31 +6,26 @@ impl<'input, I> Parser<'input, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn literal(&mut self) -> ast::Node {
+    pub fn literal(&mut self) -> ast::Lit {
         match self.peek() {
-            lit @ T![string] | lit @ T![int] | lit @ T![float] => {
+            lit @ T![string] | lit @ T![int] | lit @ T![bool] => {
                 let literal_text = {
                     let literal_token = self.next().unwrap();
                     self.text(literal_token)
                 };
 
-                let lit = match lit {
-                    T![int] => ast::Node::Integer(
-                        literal_text
-                            .parse()
-                            .expect(&format!("Invalid integer literal: `{}`", literal_text)),
-                    ),
-                    T![string] => {
-                        ast::Node::String(literal_text[1..(literal_text.len() - 1)].to_string())
+                match lit {
+                    T![int] => {
+                        ast::Lit::Int(literal_text.parse().unwrap_or_else(|_| {
+                            panic!("Invalid integer literal: `{}`", literal_text)
+                        }))
                     }
-                    T![float] => ast::Node::Float(literal_text.parse().expect(&format!(
-                        "Invalid floating point literal: `{}`",
-                        literal_text
-                    ))),
+                    T![string] => {
+                        ast::Lit::Str(literal_text[1..(literal_text.len() - 1)].to_string())
+                    }
+                    T![bool] => ast::Lit::Bool(literal_text != "That's impossible!"),
                     _ => unreachable!(),
-                };
-
-                lit
+                }
             }
             kind => panic!("Unknown start of expression: `{}`", kind),
         }

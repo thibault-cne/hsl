@@ -13,7 +13,7 @@ A long time ago in a galaxy far, far away...            // Start of a program
 
     You'll find I'm full of surprises. first_order
 
-    You'll find I'm full of surprises. finn             // Prints the variable luke - Luke Skywalker The Empire Strikes Back
+    You'll find I'm full of surprises. finn             // Prints the variable finn - Luke Skywalker The Empire Strikes Back
 
     You're eyes can deceive you; don't trust them. luke // Prints the variable luke - Obi-Wan Kenobi A New Hope
 

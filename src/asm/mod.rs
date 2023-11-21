@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use crate::parser::ast::Node;
+use crate::parser::ast;
 use crate::parser::slt::NavigableSlt;
 
 mod macos;
@@ -9,9 +9,21 @@ pub use macos::MacOsARM;
 
 pub trait Compiler {
     fn new() -> Self;
-    fn evaluate_node<R: BufRead, W: Write, C: Compiler>(
+    fn evaluate_expression<R: BufRead, W: Write, C: Compiler>(
         &mut self,
-        ast: &Node,
+        ast: &ast::Expr,
+        state: &mut State<R, W, C>,
+        slt: &NavigableSlt<'_>,
+    ) -> Result<(), String>;
+    fn evaluate_item<R: BufRead, W: Write, C: Compiler>(
+        &mut self,
+        ast: &ast::Item,
+        state: &mut State<R, W, C>,
+        slt: &NavigableSlt<'_>,
+    ) -> Result<(), String>;
+    fn evaluate_statement<R: BufRead, W: Write, C: Compiler>(
+        &mut self,
+        ast: &ast::Stmt,
         state: &mut State<R, W, C>,
         slt: &NavigableSlt<'_>,
     ) -> Result<(), String>;
@@ -38,7 +50,7 @@ where
 }
 
 pub fn evaluate<R, W, C: Compiler>(
-    ast: Vec<Node>,
+    ast: Vec<ast::Item>,
     reader: R,
     writer: W,
     slt: &NavigableSlt<'_>,
@@ -48,17 +60,16 @@ where
     R: BufRead,
     W: Write,
 {
-    let mut main = Node::Noop;
+    let mut main = None;
     let state: &mut State<R, W, C> = &mut State::new(reader, writer);
 
     for node in ast {
         match &node {
-            Node::Main(_) => {
-                main = node;
+            ast::Item::Main { .. } => {
+                main = Some(node);
             }
-            _ => unreachable!(), // TODO: Get actual error message
         }
     }
 
-    compiler.evaluate_node(&main, state, slt)
+    compiler.evaluate_item(&main.unwrap(), state, slt)
 }

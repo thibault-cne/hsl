@@ -1,26 +1,29 @@
-use std::io::{BufRead, Write};
+use std::io::Write;
 
-use super::{Compiler, State};
+use super::Compiler;
 use crate::parser::{ast, slt::NavigableSlt};
 
-pub struct MacOsARM {
+mod a64;
+
+pub struct A64Compiler<W: Write> {
     string_literals: Vec<(String, String)>,
+    writer: W,
 }
 
-impl Compiler for MacOsARM {
-    fn new() -> Self {
-        MacOsARM {
+impl<W: Write> Compiler<W> for A64Compiler<W> {
+    fn new(writer: W) -> Self {
+        A64Compiler {
             string_literals: vec![
                 ("str_format".to_string(), "%s\\n".to_string()),
                 ("int_format".to_string(), "%d\\n".to_string()),
             ],
+            writer,
         }
     }
 
-    fn evaluate_expression<R: BufRead, W: Write, C: Compiler>(
+    fn evaluate_expression(
         &mut self,
         ast: &ast::Expr,
-        state: &mut State<R, W, C>,
         _slt: &NavigableSlt<'_>,
     ) -> Result<(), String> {
         match ast {
@@ -33,20 +36,20 @@ impl Compiler for MacOsARM {
                     _ => unreachable!(),
                 };
                 match op {
-                    ast::Op::Add => add(&mut state.writer, "x8", "x8", &format!("{:#02x}", value)),
-                    ast::Op::Sub => sub(&mut state.writer, "x8", "x8", &format!("{:#02x}", value)),
+                    ast::Op::Add => add(&mut self.writer, "x8", "x8", &format!("{:#02x}", value)),
+                    ast::Op::Sub => sub(&mut self.writer, "x8", "x8", &format!("{:#02x}", value)),
                     ast::Op::Mul => {
-                        mov(&mut state.writer, "x9", &format!("{:#02x}", value));
-                        mul(&mut state.writer, "x8", "x8", "x9");
+                        mov(&mut self.writer, "x9", &format!("{:#02x}", value));
+                        mul(&mut self.writer, "x8", "x8", "x9");
                     }
                     ast::Op::Div => {
-                        mov(&mut state.writer, "x9", &format!("{:#02x}", value));
-                        sdiv(&mut state.writer, "x8", "x8", "x9");
+                        mov(&mut self.writer, "x9", &format!("{:#02x}", value));
+                        sdiv(&mut self.writer, "x8", "x8", "x9");
                     }
                     ast::Op::Mod => {
-                        mov(&mut state.writer, "x9", &format!("{:#02x}", value));
-                        udiv(&mut state.writer, "x10", "x8", "x9");
-                        msub(&mut state.writer, "x8", "x10", "x9", "x8");
+                        mov(&mut self.writer, "x9", &format!("{:#02x}", value));
+                        udiv(&mut self.writer, "x10", "x8", "x9");
+                        msub(&mut self.writer, "x8", "x10", "x9", "x8");
                     }
                 }
 
@@ -55,10 +58,9 @@ impl Compiler for MacOsARM {
         }
     }
 
-    fn evaluate_statement<R: BufRead, W: Write, C: Compiler>(
+    fn evaluate_statement(
         &mut self,
         ast: &ast::Stmt,
-        state: &mut State<R, W, C>,
         slt: &NavigableSlt<'_>,
     ) -> Result<(), String> {
         match ast {
@@ -66,28 +68,28 @@ impl Compiler for MacOsARM {
                 // TODO: add the value to the stack
                 let variable = slt.find_variable(var_name).unwrap();
                 writeln!(
-                    state.writer,
+                    self.writer,
                     "\t// Pushing variable {} to the stack",
                     var_name
                 )
                 .map_err(|e| e.to_string())?;
                 match &variable.value {
                     crate::parser::slt::Value::String(s) => {
-                        load_string(&mut state.writer, var_name, "x8");
-                        str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
+                        load_string(&mut self.writer, var_name, "x8");
+                        str(&mut self.writer, "x8", "sp", Some(Index::pre(-16)));
                         self.string_literals
                             .push((var_name.to_string(), s.to_string()))
                     }
                     crate::parser::slt::Value::Integer(i) => {
-                        mov(&mut state.writer, "x8", &format!("#{}", i));
-                        str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
+                        mov(&mut self.writer, "x8", &format!("#{}", i));
+                        str(&mut self.writer, "x8", "sp", Some(Index::pre(-16)));
                     }
                     crate::parser::slt::Value::Boolean(bool) => {
-                        mov(&mut state.writer, "x8", &format!("#{}", *bool as u8));
-                        str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
+                        mov(&mut self.writer, "x8", &format!("#{}", *bool as u8));
+                        str(&mut self.writer, "x8", "sp", Some(Index::pre(-16)));
                     }
                 }
-                self.evaluate_expression(value, state, slt)
+                self.evaluate_expression(value, slt)
             }
             ast::Stmt::Print { value } => {
                 // Validate it's a value
@@ -98,35 +100,35 @@ impl Compiler for MacOsARM {
                         let format_name = match variable.value {
                             crate::parser::slt::Value::String(_) => {
                                 ldr(
-                                    &mut state.writer,
+                                    &mut self.writer,
                                     "x29",
                                     "x8",
                                     Some(Index::offset(variable.offset)),
                                 );
-                                str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
+                                str(&mut self.writer, "x8", "sp", Some(Index::pre(-16)));
                                 "str_format"
                             }
                             crate::parser::slt::Value::Integer(_) => {
                                 ldr(
-                                    &mut state.writer,
+                                    &mut self.writer,
                                     "x29",
                                     "x8",
                                     Some(Index::offset(variable.offset)),
                                 );
-                                str(&mut state.writer, "x8", "sp", Some(Index::pre(-16)));
+                                str(&mut self.writer, "x8", "sp", Some(Index::pre(-16)));
                                 "int_format"
                             }
                             _ => "any",
                         };
-                        load_string(&mut state.writer, format_name, "x0");
+                        load_string(&mut self.writer, format_name, "x0");
                     }
                     _ => return Err("Return not a value".to_string()),
                 };
 
                 // TODO: just call the printf function as everything must be
                 // in the stack
-                writeln!(state.writer, "\tbl _printf").expect("writer error");
-                add(&mut state.writer, "sp", "sp", "0x10");
+                writeln!(self.writer, "\tbl _printf").expect("writer error");
+                add(&mut self.writer, "sp", "sp", "0x10");
                 Ok(())
             }
             ast::Stmt::Assignment {
@@ -134,18 +136,18 @@ impl Compiler for MacOsARM {
                 initial_value,
                 operations,
             } => {
-                writeln!(state.writer, "\n\t// Start operations").expect("writer error");
+                writeln!(self.writer, "\n\t// Start operations").expect("writer error");
                 match &**initial_value {
                     ast::Expr::Literal(lit) => {
                         if let ast::Lit::Int(init) = lit {
-                            mov(&mut state.writer, "x8", &format!("{:#02x}", init));
+                            mov(&mut self.writer, "x8", &format!("{:#02x}", init));
                         }
                     }
                     ast::Expr::Ident(ident) => {
                         // TODO: handle string and float and boolean
                         let variable = slt.find_variable(ident).unwrap();
                         ldr(
-                            &mut state.writer,
+                            &mut self.writer,
                             "x29",
                             "x8",
                             Some(Index::offset(variable.offset)),
@@ -154,7 +156,7 @@ impl Compiler for MacOsARM {
                     _ => unreachable!(),
                 }
                 for op in operations {
-                    self.evaluate_expression(op, state, slt)?;
+                    self.evaluate_expression(op, slt)?;
                 }
 
                 let var_name = match &**var_name {
@@ -164,56 +166,51 @@ impl Compiler for MacOsARM {
                 let variable = slt.find_variable(var_name).unwrap();
 
                 str(
-                    &mut state.writer,
+                    &mut self.writer,
                     "x8",
                     "x29",
                     Some(Index::offset(variable.offset)),
                 );
-                writeln!(state.writer, "\n\t//End operations\n").expect("writer error");
+                writeln!(self.writer, "\n\t//End operations\n").expect("writer error");
 
                 Ok(())
             }
         }
     }
 
-    fn evaluate_item<R: BufRead, W: Write, C: Compiler>(
-        &mut self,
-        ast: &ast::Item,
-        state: &mut State<R, W, C>,
-        slt: &NavigableSlt<'_>,
-    ) -> Result<(), String> {
+    fn evaluate_item(&mut self, ast: &ast::Item, slt: &NavigableSlt<'_>) -> Result<(), String> {
         match ast {
             ast::Item::Main { body } => {
-                writeln!(state.writer, ".global _start\n.align 2\n_start:")
+                writeln!(self.writer, ".global _start\n.align 2\n_start:")
                     .map_err(|x| x.to_string())?;
-                stp(&mut state.writer, "x29", "lr", "sp", Some(Index::pre(-16)));
-                mov(&mut state.writer, "x29", "sp");
+                stp(&mut self.writer, "x29", "lr", "sp", Some(Index::pre(-16)));
+                mov(&mut self.writer, "x29", "sp");
 
                 let child = slt.childs().next().unwrap();
 
                 for stmt in body {
-                    self.evaluate_statement(stmt, state, &child)?;
+                    self.evaluate_statement(stmt, &child)?;
                 }
 
                 let stack_size = child.slt.variables.len() * 16;
                 add(
-                    &mut state.writer,
+                    &mut self.writer,
                     "sp",
                     "sp",
                     &format!("{:#02x}", stack_size),
                 );
 
-                ldp(&mut state.writer, "x29", "lr", "sp", Some(Index::post(16)));
+                ldp(&mut self.writer, "x29", "lr", "sp", Some(Index::post(16)));
 
                 writeln!(
-                    state.writer,
+                    self.writer,
                     "\n\tmov     x0, #0\n\tmov     x16, #1\n\tsvc     0"
                 )
                 .map_err(|x| x.to_string())?;
 
-                writeln!(state.writer, ".data").map_err(|x| x.to_string())?;
+                writeln!(self.writer, ".data").map_err(|x| x.to_string())?;
                 for (name, s) in self.string_literals.iter() {
-                    writeln!(state.writer, "\t{}:      .asciz  \"{}\"", name, s)
+                    writeln!(self.writer, "\t{}:      .asciz  \"{}\"", name, s)
                         .map_err(|x| x.to_string())?;
                 }
                 Ok(())

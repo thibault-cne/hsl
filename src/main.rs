@@ -26,12 +26,6 @@ fn main() {
 
     let file = std::fs::File::create("test.s").expect("unable to create a new file");
 
-    asm::evaluate(
-        vec![program],
-        std::io::stdin().lock(),
-        file,
-        &(&slt).into(),
-        asm::MacOsARM::new(),
-    )
-    .expect("unable to compile");
+    asm::evaluate(vec![program], &(&slt).into(), asm::A64Compiler::new(file))
+        .expect("unable to compile");
 }

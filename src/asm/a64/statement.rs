@@ -186,7 +186,67 @@ impl<W: Write> A64Compiler<W> {
 
                     Ok(())
                 }
-                ast::Expr::Literal(_) => todo!(),
+                ast::Expr::Literal(lit) => match lit {
+                    ast::Lit::Int(0) | ast::Lit::NegInt(0) | ast::Lit::Bool(true) => {
+                        // Case with no else generated because we now we don't
+                        // have to handle it
+                        let then_slt = childs.next().unwrap();
+                        let mut then_childs = then_slt.childs();
+
+                        self.comment("Start of then block");
+                        self.stp("x29", "lr", "sp", Some(Index::pre(-16)));
+                        self.mov("x29", "sp");
+
+                        // Then core
+                        for stmt in body {
+                            self.statement(stmt, &then_slt, &mut then_childs)?;
+                        }
+
+                        self.skip_line();
+                        self.comment("Unstack then block");
+                        let stack_size = then_slt.slt.variables.len() * 16;
+                        self.add("sp", "sp", &format!("{:#02x}", stack_size));
+                        self.ldp("x29", "lr", "sp", Some(Index::post(16)));
+
+                        // If there is an else statement, consume it's
+                        // SymbolLookupTable
+                        if else_stmt.is_some() {
+                            childs.next();
+                        }
+
+                        Ok(())
+                    }
+                    ast::Lit::Int(_) | ast::Lit::NegInt(_) | ast::Lit::Bool(false)
+                        if else_stmt.is_some() =>
+                    {
+                        // Case with no then generated because we don't need
+                        // to
+                        // Consume the `then` block SymbolLookupTable
+                        childs.next();
+                        let else_slt = childs.next().unwrap();
+                        let mut else_childs = else_slt.childs();
+
+                        self.comment("Start of else block");
+                        self.stp("x29", "lr", "sp", Some(Index::pre(-16)));
+                        self.mov("x29", "sp");
+
+                        // Then core
+                        for stmt in else_stmt.as_ref().unwrap() {
+                            self.statement(stmt, &else_slt, &mut else_childs)?;
+                        }
+
+                        self.skip_line();
+                        self.comment("Unstack else block");
+                        let stack_size = else_slt.slt.variables.len() * 16;
+                        self.add("sp", "sp", &format!("{:#02x}", stack_size));
+                        self.ldp("x29", "lr", "sp", Some(Index::post(16)));
+
+                        Ok(())
+                    }
+                    ast::Lit::Int(_) | ast::Lit::NegInt(_) | ast::Lit::Bool(false) => Ok(()),
+
+                    ast::Lit::Str(_) => unreachable!(),
+                },
                 _ => unreachable!(),
             },
         }

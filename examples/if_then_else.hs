@@ -18,7 +18,31 @@ A long time ago in a galaxy far, far away...    <(-.-)> Start of a program
     The garbage will do.
 
     Do, or do not. There is no try. finn
-        You'll find I'm full of surprises. "Do"     <(-.-)> Prints the variable finn - Luke Skywalker The Empire Strikes Back
+        You'll find I'm full of surprises. "Do"
+    These aren't the droids you're looking for.
+        You'll find I'm full of surprises. "Don't"
+    You have failed me for the last time.
+
+    Do, or do not. There is no try. From a certain point of view.
+        You'll find I'm full of surprises. "Do"
+    These aren't the droids you're looking for.
+        You'll find I'm full of surprises. "Don't"
+    You have failed me for the last time.
+
+    Do, or do not. There is no try. 1
+        You'll find I'm full of surprises. "Do"
+    These aren't the droids you're looking for.
+        You'll find I'm full of surprises. "Don't"
+    You have failed me for the last time.
+
+    Do, or do not. There is no try. 0
+        You'll find I'm full of surprises. "Do"
+    These aren't the droids you're looking for.
+        You'll find I'm full of surprises. "Don't"
+    You have failed me for the last time.
+
+    Do, or do not. There is no try. -0
+        You'll find I'm full of surprises. "Do"
     These aren't the droids you're looking for.
         You'll find I'm full of surprises. "Don't"
     You have failed me for the last time.

@@ -10,7 +10,7 @@ mod parser;
 use asm::Compiler;
 
 fn main() {
-    let content = std::fs::read_to_string("examples/if_then_else.sw").expect("not found");
+    let content = std::fs::read_to_string("examples/if_then_else.hs").expect("not found");
 
     let mut parser = parser::Parser::new(&content);
     let program = parser.parse();

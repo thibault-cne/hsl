@@ -4,8 +4,8 @@ use std::collections::HashMap;
 pub struct SymbolLookupTable {
     pub variables: HashMap<String, Variable>,
     pub offset: i32,
-    pub region: usize,
-    pub scope: usize,
+    pub region: u32,
+    pub scope: u32,
 
     pub children: Vec<SymbolLookupTable>,
 }
@@ -16,20 +16,34 @@ impl SymbolLookupTable {
     }
 
     pub fn add_string(&mut self, name: &str, s: String) {
-        self.variables
-            .insert(name.to_string(), Variable::string(s, self.offset));
+        self.variables.insert(
+            name.to_string(),
+            Variable::new(self.offset, Value::Str(s), self.scope),
+        );
+        self.offset -= 16;
+    }
+
+    pub fn add_negative_integer(&mut self, name: &str, i: u32) {
+        self.variables.insert(
+            name.to_string(),
+            Variable::new(self.offset, Value::NegInt(i), self.scope),
+        );
         self.offset -= 16;
     }
 
     pub fn add_integer(&mut self, name: &str, i: u32) {
-        self.variables
-            .insert(name.to_string(), Variable::integer(i, self.offset));
+        self.variables.insert(
+            name.to_string(),
+            Variable::new(self.offset, Value::Int(i), self.scope),
+        );
         self.offset -= 16;
     }
 
     pub fn add_boolean(&mut self, name: &str, b: bool) {
-        self.variables
-            .insert(name.to_string(), Variable::boolean(b, self.offset));
+        self.variables.insert(
+            name.to_string(),
+            Variable::new(self.offset, Value::Bool(b), self.scope),
+        );
         self.offset -= 16;
     }
 
@@ -54,40 +68,29 @@ impl Default for SymbolLookupTable {
 pub struct Variable {
     pub offset: i32,
     pub value: Value,
+    pub scope: u32,
 }
 
 impl Variable {
-    fn integer(i: u32, offset: i32) -> Variable {
+    fn new(offset: i32, value: Value, scope: u32) -> Variable {
         Variable {
             offset,
-            value: Value::Integer(i),
-        }
-    }
-
-    fn boolean(b: bool, offset: i32) -> Variable {
-        Variable {
-            offset,
-            value: Value::Boolean(b),
-        }
-    }
-
-    fn string(s: String, offset: i32) -> Variable {
-        Variable {
-            offset,
-            value: Value::String(s),
+            value,
+            scope,
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
-    String(String),
-    Integer(u32),
-    Boolean(bool),
+    Str(String),
+    Int(u32),
+    NegInt(u32),
+    Bool(bool),
 }
 
 pub struct Builder {
-    region_count: usize,
+    region_count: u32,
 }
 
 impl Builder {

@@ -8,7 +8,7 @@ where
 {
     pub fn expression(&mut self) -> ast::Expr {
         match self.peek() {
-            T![string] | T![int] | T![bool] => ast::Expr::Literal(self.literal()),
+            T![string] | T![int] | T![bool] | T![neg] => ast::Expr::Literal(self.literal()),
             T![ident] => {
                 let name = {
                     let ident_token = self.next().unwrap();

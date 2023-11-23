@@ -13,6 +13,13 @@ pub(crate) struct Rule {
     pub matches: fn(&str) -> Option<usize>,
 }
 
+fn math_single_char(input: &str, char: char) -> Option<usize> {
+    input
+        .chars()
+        .next()
+        .and_then(|ch| if ch == char { Some(1) } else { None })
+}
+
 fn match_quote(input: &str, quote: &str) -> Option<usize> {
     input.starts_with(quote).then_some(quote.len())
 }
@@ -60,6 +67,10 @@ pub(crate) fn get_rules() -> Vec<Rule> {
                     .last()
                     .map(|(pos, _)| pos + 1)
             },
+        },
+        Rule {
+            kind: T![neg],
+            matches: |input| math_single_char(input, '-'),
         },
         Rule {
             kind: T![string],

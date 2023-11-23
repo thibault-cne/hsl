@@ -5,6 +5,7 @@ macro_rules! T {
     [string] => { $crate::lexer::token::TokenKind::String };
     [comment] => { $crate::lexer::token::TokenKind::Comment };
     [int] => { $crate::lexer::token::TokenKind::Int };
+    [neg] => { $crate::lexer::token::TokenKind::Negation };
     [bool] => { $crate::lexer::token::TokenKind::Boolean };
     [ident] => { $crate::lexer::token::TokenKind::Identifier };
     [let] => { $crate::lexer::token::TokenKind::KeywordLet };
@@ -70,6 +71,7 @@ pub enum TokenKind {
     AssignValueEnd,
     SetValue,
     // Operations
+    Negation,
     Add,
     Substract,
     Multiply,
@@ -93,6 +95,7 @@ impl fmt::Display for TokenKind {
                 T![string] => "String",
                 T![comment] => "Comment",
                 T![int] => "Int",
+                T![neg] => "Negation",
                 T![bool] => "Boolean",
                 T![ident] => "Identifier",
                 T![let] => "Let",

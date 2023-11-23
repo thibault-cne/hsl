@@ -67,6 +67,7 @@ impl ast::Stmt {
                     match lit {
                         ast::Lit::Str(s) => slt.add_string(var_name, s.to_string()),
                         ast::Lit::Int(i) => slt.add_integer(var_name, *i),
+                        ast::Lit::NegInt(i) => slt.add_negative_integer(var_name, *i),
                         ast::Lit::Bool(b) => slt.add_boolean(var_name, *b),
                     }
                 }

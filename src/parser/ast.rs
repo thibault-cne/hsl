@@ -16,6 +16,7 @@ pub enum Op {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lit {
+    NegInt(u32),
     Int(u32),
     Str(String),
     Bool(bool),

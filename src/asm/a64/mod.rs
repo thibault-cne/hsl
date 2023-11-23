@@ -74,17 +74,21 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
                 )
                 .map_err(|e| e.to_string())?;
                 match &variable.value {
-                    crate::parser::slt::Value::String(s) => {
+                    crate::parser::slt::Value::Str(s) => {
                         self.load_string(var_name, "x8");
                         self.str("x8", "sp", Some(Index::pre(-16)));
                         self.string_literals
                             .push((var_name.to_string(), s.to_string()))
                     }
-                    crate::parser::slt::Value::Integer(i) => {
-                        self.mov("x8", &format!("#{}", i));
+                    crate::parser::slt::Value::Int(i) => {
+                        self.mov("x8", &format!("{:#02x}", i));
                         self.str("x8", "sp", Some(Index::pre(-16)));
                     }
-                    crate::parser::slt::Value::Boolean(bool) => {
+                    crate::parser::slt::Value::NegInt(i) => {
+                        self.mov("x8", &format!("-{:#02x}", i));
+                        self.str("x8", "sp", Some(Index::pre(-16)));
+                    }
+                    crate::parser::slt::Value::Bool(bool) => {
                         self.mov("x8", &format!("#{}", *bool as u8));
                         self.str("x8", "sp", Some(Index::pre(-16)));
                     }
@@ -113,12 +117,13 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
                     ast::Expr::Ident(ident) => {
                         let variable = slt.find_variable(ident).unwrap();
                         let format_name = match variable.value {
-                            crate::parser::slt::Value::String(_) => {
+                            crate::parser::slt::Value::Str(_) => {
                                 self.ldr("x29", "x8", Some(Index::offset(variable.offset)));
                                 self.str("x8", "sp", Some(Index::pre(-16)));
                                 "str_format"
                             }
-                            crate::parser::slt::Value::Integer(_) => {
+                            crate::parser::slt::Value::Int(_)
+                            | crate::parser::slt::Value::NegInt(_) => {
                                 self.ldr("x29", "x8", Some(Index::offset(variable.offset)));
                                 self.str("x8", "sp", Some(Index::pre(-16)));
                                 "int_format"

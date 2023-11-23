@@ -6,17 +6,16 @@ use crate::option::parser::MatchedFlags;
 /// The help string.
 /// This string is printed when the user asks for help.
 static USAGE: &str = "Usage: 
-    search [options] [directories...]
+    hsl [options]
 
 META OPTIONS
     -h, --help          show this!
     -v, --version       show the version of search
 
-FILTERING OPTIONS
-    -n, --name          filter the files by name
-    -s, --size          filter the files by size
-    --include-dirs      include the directories in the search
-    --only-dirs         only search in the directories
+COMPILATION OPTIONS
+    -s, --source        the source file to compile
+    -o, --output        the output file to produce
+    -t, --target        the targeted architecture (must be in [armv8, armv7, x86])
 ";
 
 /// A struct that represents the help string.

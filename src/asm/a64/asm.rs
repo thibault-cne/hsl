@@ -186,6 +186,6 @@ impl<W: Write> A64Compiler<W> {
     }
 
     pub fn skip_line(&mut self) {
-        writeln!(self.writer, "").expect("writer error in skip_line()");
+        writeln!(self.writer).expect("writer error in skip_line()");
     }
 }

@@ -19,7 +19,7 @@ For now HSL supports the following constructs :
 
 **File extension**
 
-Files written in the HyperSpace uses the `.hs` file extension. You can find some examples in the `examples` folder in order to write your own programs.
+Files written in the HyperSpace uses the `.hs` file extension. You can find some examples in the [`examples`](./examples/) folder in order to write your own programs.
 
 **Compilation**
 

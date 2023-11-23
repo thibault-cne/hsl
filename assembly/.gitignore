@@ -5,3 +5,6 @@ build
 
 # Ignore objs folder
 objs
+
+# Ignore test.s file because it's the one changing often
+srcs/test.s

@@ -45,9 +45,21 @@ impl<W: Write> A64Compiler<W> {
                 match &**value {
                     ast::Expr::Literal(lit) => match lit {
                         ast::Lit::Str(str) => {
-                            let lit_name = format!("_lit_{}", self.string_literals.len());
-                            self.string_literals
-                                .push((lit_name.clone(), str.to_string()));
+                            let lit_name = match self
+                                .string_literals
+                                .iter()
+                                .rev()
+                                .find(|(_, val)| val == str)
+                            {
+                                Some((lit_name, _)) => lit_name.to_string(),
+                                None => {
+                                    let lit_name = format!("_lit_{}", self.string_literals.len());
+                                    self.string_literals
+                                        .push((lit_name.clone(), str.to_string()));
+                                    lit_name
+                                }
+                            };
+
                             self.load_string(&lit_name, "x8");
                             self.load_string("str_format", "x0");
                             self.str("x8", "sp", Some(Index::pre(-16)));

@@ -67,12 +67,7 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
             ast::Stmt::Let { var_name, value } => {
                 // TODO: add the value to the stack
                 let variable = slt.find_variable(var_name).unwrap();
-                writeln!(
-                    self.writer,
-                    "\t// Pushing variable {} to the stack",
-                    var_name
-                )
-                .map_err(|e| e.to_string())?;
+                self.comment(&format!("Pushing variable {} to the stack", var_name));
                 match &variable.value {
                     crate::parser::slt::Value::Str(s) => {
                         self.load_string(var_name, "x8");
@@ -144,7 +139,7 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
                 initial_value,
                 operations,
             } => {
-                writeln!(self.writer, "\n\t// Start operations").expect("writer error");
+                self.comment("Start operations\n");
                 match &**initial_value {
                     ast::Expr::Literal(lit) => {
                         if let ast::Lit::Int(init) = lit {
@@ -169,7 +164,7 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
                 let variable = slt.find_variable(var_name).unwrap();
 
                 self.str("x8", "x29", Some(Index::offset(variable.offset)));
-                writeln!(self.writer, "\n\t//End operations\n").expect("writer error");
+                self.comment("End operations\n");
 
                 Ok(())
             }
@@ -181,8 +176,10 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
             ast::Item::Main { body } => {
                 writeln!(self.writer, ".global _start\n.align 2\n_start:")
                     .map_err(|x| x.to_string())?;
+                self.comment("Program header");
                 self.stp("x29", "lr", "sp", Some(Index::pre(-16)));
                 self.mov("x29", "sp");
+                self.skip_line();
 
                 let child = slt.childs().next().unwrap();
 
@@ -191,8 +188,9 @@ impl<W: Write> Compiler<W> for A64Compiler<W> {
                 }
 
                 let stack_size = child.slt.variables.len() * 16;
+                self.skip_line();
+                self.comment("Pop the stack");
                 self.add("sp", "sp", &format!("{:#02x}", stack_size));
-
                 self.ldp("x29", "lr", "sp", Some(Index::post(16)));
 
                 writeln!(

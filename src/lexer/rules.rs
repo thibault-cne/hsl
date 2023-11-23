@@ -4,7 +4,7 @@ use crate::lexer::token::TokenKind;
 
 lazy_static! {
     static ref STRING_REGEX: Regex = Regex::new(r#"^"((\\"|\\\\)|[^\\"])*""#).unwrap();
-    static ref COMMENT_REGEX: Regex = Regex::new(r#"^//[^\n]*\n"#).unwrap();
+    static ref COMMENT_REGEX: Regex = Regex::new(r#"^<\(-\.-\)>[^\n]*\n"#).unwrap();
     static ref IDENTIFIER_REGEX: Regex = Regex::new(r##"^([A-Za-z]|_)([A-Za-z]|_|\d)*"##).unwrap();
 }
 

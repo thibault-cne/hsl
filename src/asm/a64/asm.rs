@@ -179,4 +179,13 @@ impl<W: Write> A64Compiler<W> {
         writeln!(self.writer, "\tmsub {}, {}, {}, {}", dst, src1, src2, src3)
             .expect("writer error");
     }
+
+    pub fn comment(&mut self, comment: &str) {
+        writeln!(self.writer, "\t// {}", comment)
+            .unwrap_or_else(|_| panic!("writer error in comment({})", comment));
+    }
+
+    pub fn skip_line(&mut self) {
+        writeln!(self.writer, "").expect("writer error in skip_line()");
+    }
 }

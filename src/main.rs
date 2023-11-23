@@ -24,7 +24,7 @@ fn main() {
 
     println!("{:?}", slt);
 
-    let file = std::fs::File::create("test.s").expect("unable to create a new file");
+    let file = std::fs::File::create("assembly/srcs/test.s").expect("unable to create a new file");
 
     asm::evaluate(vec![program], &(&slt).into(), asm::A64Compiler::new(file))
         .expect("unable to compile");

@@ -137,5 +137,17 @@ pub(crate) fn get_rules() -> Vec<Rule> {
             kind: T![mod],
             matches: |input| match_quote(input, "Never tell me the odds!"),
         },
+        Rule {
+            kind: T![if],
+            matches: |input| match_quote(input, "Do, or do not. There is no try."),
+        },
+        Rule {
+            kind: T![else],
+            matches: |input| match_quote(input, "These aren't the droids you're looking for."),
+        },
+        Rule {
+            kind: T![if_end],
+            matches: |input| match_quote(input, "You have failed me for the last time."),
+        },
     ]
 }

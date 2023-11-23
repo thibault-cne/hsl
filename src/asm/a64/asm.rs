@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use crate::parser::slt::Variable;
+
 use super::{A64Compiler, Index, Position};
 
 impl<W: Write> A64Compiler<W> {
@@ -11,6 +13,15 @@ impl<W: Write> A64Compiler<W> {
             register, register, name
         )
         .expect("writer error");
+    }
+
+    pub fn load_variable(&mut self, variable: &Variable, slt_scope: u32) {
+        let diff = slt_scope - variable.scope;
+        self.mov("x9", "x29");
+        for _ in 0..diff {
+            self.ldr("x9", "x9", None);
+        }
+        self.ldr("x9", "x8", Some(Index::offset(variable.offset)));
     }
 
     pub fn str(&mut self, src: &str, dst: &str, index: Option<Index>) {
@@ -187,5 +198,20 @@ impl<W: Write> A64Compiler<W> {
 
     pub fn skip_line(&mut self) {
         writeln!(self.writer).expect("writer error in skip_line()");
+    }
+
+    pub fn b(&mut self, label: &str, flag: &str) {
+        writeln!(self.writer, "\tb{} _{}", flag, label)
+            .unwrap_or_else(|_| panic!("writer error in b(label: {}, flag: {})", label, flag));
+    }
+
+    pub fn label(&mut self, label: &str) {
+        writeln!(self.writer, "_{}:", label)
+            .unwrap_or_else(|_| panic!("writer error in label({})", label));
+    }
+
+    pub fn cmp(&mut self, src: &str) {
+        writeln!(self.writer, "\tcmp {}, 0x0", src)
+            .unwrap_or_else(|_| panic!("writer error in cmp({})", src));
     }
 }

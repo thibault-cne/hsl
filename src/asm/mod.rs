@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::parser::ast;
-use crate::parser::slt::NavigableSlt;
+use crate::parser::slt::{ChildIterator, NavigableSlt};
 
 mod a64;
 
@@ -14,9 +14,18 @@ pub trait Compiler<W: Write> {
         ast: &ast::Expr,
         slt: &NavigableSlt<'_>,
     ) -> Result<(), String>;
-    fn evaluate_item(&mut self, ast: &ast::Item, slt: &NavigableSlt<'_>) -> Result<(), String>;
-    fn evaluate_statement(&mut self, ast: &ast::Stmt, slt: &NavigableSlt<'_>)
-        -> Result<(), String>;
+    fn evaluate_item(
+        &mut self,
+        ast: &ast::Item,
+        slt: &NavigableSlt<'_>,
+        childs: &mut ChildIterator<'_>,
+    ) -> Result<(), String>;
+    fn evaluate_statement(
+        &mut self,
+        ast: &ast::Stmt,
+        slt: &NavigableSlt<'_>,
+        childs: &mut ChildIterator<'_>,
+    ) -> Result<(), String>;
 }
 
 pub fn evaluate<W: Write, C: Compiler<W>>(
@@ -34,5 +43,5 @@ pub fn evaluate<W: Write, C: Compiler<W>>(
         }
     }
 
-    compiler.evaluate_item(&main.unwrap(), slt)
+    compiler.evaluate_item(&main.unwrap(), slt, &mut slt.childs())
 }

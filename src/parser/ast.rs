@@ -36,6 +36,11 @@ pub enum Stmt {
     Print {
         value: Box<Expr>,
     },
+    IfStmt {
+        condition: Box<Expr>,
+        body: Vec<Stmt>,
+        else_stmt: Option<Vec<Stmt>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

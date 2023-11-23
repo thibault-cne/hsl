@@ -13,9 +13,12 @@ macro_rules! T {
     [start] => { $crate::lexer::token::TokenKind::BeginMain };
     [end] => { $crate::lexer::token::TokenKind::EndMain };
     [print] => { $crate::lexer::token::TokenKind::Print };
-    [assign_start] => { $crate::lexer::token::TokenKind::AssignValueStart };
-    [assign_end] => { $crate::lexer::token::TokenKind::AssignValueEnd };
-    [set] => { $crate::lexer::token::TokenKind::SetValue };
+    [assign_start] => { $crate::lexer::token::TokenKind::KeywordAssignValue };
+    [assign_end] => { $crate::lexer::token::TokenKind::KeywordAssignValueEnd };
+    [set] => { $crate::lexer::token::TokenKind::KeywordSet };
+    [if] => { $crate::lexer::token::TokenKind::KeywordIf };
+    [if_end] => { $crate::lexer::token::TokenKind::KeywordIfEnd };
+    [else] => { $crate::lexer::token::TokenKind::KeywordElse };
     [add] => { $crate::lexer::token::TokenKind::Add };
     [sub] => { $crate::lexer::token::TokenKind::Substract };
     [mul] => { $crate::lexer::token::TokenKind::Multiply };
@@ -67,9 +70,13 @@ pub enum TokenKind {
     // Functions
     Print,
     // Assign values block
-    AssignValueStart,
-    AssignValueEnd,
-    SetValue,
+    KeywordAssignValue,
+    KeywordAssignValueEnd,
+    KeywordSet,
+    // If then else
+    KeywordIf,
+    KeywordElse,
+    KeywordIfEnd,
     // Operations
     Negation,
     Add,
@@ -106,6 +113,9 @@ impl fmt::Display for TokenKind {
                 T![assign_start] => "Assign value start",
                 T![assign_end] => "Assign value end",
                 T![set] => "Set value",
+                T![if] => "If",
+                T![if_end] => "If end",
+                T![else] => "Else",
                 T![add] => "Addition",
                 T![sub] => "Substraction",
                 T![mul] => "Multiplication",

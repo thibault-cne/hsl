@@ -21,19 +21,14 @@ where
                 );
                 let var_name = self.text(ident).to_string();
                 self.consume(T![init]);
-                let value = self.expression();
-                ast::Stmt::Let {
-                    var_name,
-                    value: Box::new(value),
-                }
+                let value = Box::new(self.expression());
+                ast::Stmt::Let { var_name, value }
             }
             T![print] => {
                 self.consume(T![print]);
-                let arg = self.expression();
+                let value = Box::new(self.expression());
 
-                ast::Stmt::Print {
-                    value: Box::new(arg),
-                }
+                ast::Stmt::Print { value }
             }
             T![assign_start] => {
                 self.consume(T![assign_start]);
@@ -54,13 +49,43 @@ where
                     operations,
                 }
             }
+            T![if] => {
+                self.consume(T![if]);
+
+                let condition = Box::new(self.expression());
+                let mut body = Vec::new();
+
+                while !self.at(T![else]) && !self.at(T![if_end]) {
+                    body.push(self.statement());
+                }
+
+                let else_stmt = if self.at(T![else]) {
+                    self.consume(T![else]);
+                    let mut else_body = Vec::new();
+
+                    while !self.at(T![if_end]) {
+                        else_body.push(self.statement());
+                    }
+
+                    Some(else_body)
+                } else {
+                    None
+                };
+
+                self.consume(T![if_end]);
+                ast::Stmt::IfStmt {
+                    condition,
+                    body,
+                    else_stmt,
+                }
+            }
             kind => panic!("Unknown start of expression: `{}`", kind),
         }
     }
 }
 
 impl ast::Stmt {
-    pub fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
+    pub fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
         match self {
             ast::Stmt::Let { var_name, value } => {
                 if let ast::Expr::Literal(lit) = &**value {
@@ -73,6 +98,20 @@ impl ast::Stmt {
                 }
             }
             ast::Stmt::Print { .. } => {}
+            ast::Stmt::IfStmt {
+                body, else_stmt, ..
+            } => {
+                builder.new_region(slt);
+                for stmt in body {
+                    stmt.visit(builder, slt.last_children_mut().unwrap());
+                }
+                if let Some(else_stmt) = else_stmt {
+                    builder.new_region(slt);
+                    for stmt in else_stmt {
+                        stmt.visit(builder, slt.last_children_mut().unwrap());
+                    }
+                }
+            }
             _ => (),
         }
     }

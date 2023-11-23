@@ -2,3 +2,6 @@
 
 # Ignore arm64.pdf
 arm64.pdf
+
+# Ignore DS_Store
+.DS_Store

@@ -6,62 +6,26 @@ _start:
 	// Pushing variable finn to the stack
 	mov x8, #10
 	str x8, [sp, -0x10]!
-	// Pushing variable luke to the stack
-	adrp x8, luke@PAGE
-	add x8, x8, luke@PAGEOFF
-	str x8, [sp, -0x10]!
-	// Pushing variable poe to the stack
-	adrp x8, poe@PAGE
-	add x8, x8, poe@PAGEOFF
-	str x8, [sp, -0x10]!
-	// Pushing variable first_order to the stack
-	adrp x8, first_order@PAGE
-	add x8, x8, first_order@PAGEOFF
-	str x8, [sp, -0x10]!
-	// Pushing variable a_boolean to the stack
-	mov x8, #0
-	str x8, [sp, -0x10]!
-
-	// Start operations
-	mov x8, 0x5
-	add x8, x8, 0x1
-	sub x8, x8, 0x4
-	mov x9, 0xa
-	mul x8, x8, x9
-	mov x9, 0x4
-	sdiv x8, x8, x9
-	mov x9, 0x2
-	sdiv x8, x8, x9
-	add x8, x8, 0x3
-	str x8, [x29, -0x10]
-
-	//End operations
-
-	ldr x8, [x29, -0x40]
-	str x8, [sp, -0x10]!
-	adrp x0, str_format@PAGE
-	add x0, x0, str_format@PAGEOFF
-	bl _printf
-	add sp, sp, 0x10
 	ldr x8, [x29, -0x10]
 	str x8, [sp, -0x10]!
 	adrp x0, int_format@PAGE
 	add x0, x0, int_format@PAGEOFF
 	bl _printf
 	add sp, sp, 0x10
-	ldr x8, [x29, -0x20]
-	str x8, [sp, -0x10]!
 	adrp x0, str_format@PAGE
 	add x0, x0, str_format@PAGEOFF
-	bl _printf
-	add sp, sp, 0x10
-	ldr x8, [x29, -0x30]
+	adrp x8, _lit_2@PAGE
+	add x8, x8, _lit_2@PAGEOFF
 	str x8, [sp, -0x10]!
-	adrp x0, str_format@PAGE
-	add x0, x0, str_format@PAGEOFF
 	bl _printf
 	add sp, sp, 0x10
-	add sp, sp, 0x50
+	mov x8, 0xa
+	str x8, [sp, -0x10]!
+	adrp x0, int_format@PAGE
+	add x0, x0, int_format@PAGEOFF
+	bl _printf
+	add sp, sp, 0x10
+	add sp, sp, 0x10
 	ldp x29, lr, [sp], 0x10
 
 	mov     x0, #0
@@ -70,6 +34,4 @@ _start:
 .data
 	str_format:      .asciz  "%s\n"
 	int_format:      .asciz  "%d\n"
-	luke:      .asciz  "Luke"
-	poe:      .asciz  "Poe Dameron"
-	first_order:      .asciz  "This is the first order"
+	_lit_2:      .asciz  "Do or do not, there is no try!"

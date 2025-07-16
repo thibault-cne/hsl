@@ -1,4 +1,6 @@
-use rules::Rule;
+use std::char;
+
+use rules::{KEYWORDS, PUNCTS};
 use token::{Span, Token};
 
 #[macro_use]
@@ -6,78 +8,378 @@ pub(crate) mod token;
 
 mod rules;
 
-pub struct Lexer<'input> {
-    input: &'input str,
+#[derive(Debug, Clone, Copy)]
+pub struct ParsePoint {
     position: usize,
-    eof: bool,
-    rules: Vec<Rule>,
+    line_start: usize,
+    line_number: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Lexer<'input> {
+    input: &'input [u8],
+    parse_point: ParsePoint,
+    has_eof: bool,
+
+    int_number: u64,
+    char_lit: char,
+    string: String,
 }
 
 impl<'input> Lexer<'input> {
-    pub fn new(input: &'input str) -> Lexer {
+    pub fn new(input: &'input str) -> Lexer<'input> {
         Lexer {
-            input,
-            position: 0,
-            eof: false,
-            rules: rules::get_rules(),
+            input: input.as_bytes(),
+            parse_point: ParsePoint {
+                position: 0,
+                line_start: 0,
+                line_number: 0,
+            },
+            has_eof: false,
+
+            int_number: 0,
+            char_lit: ' ',
+            string: String::new(),
         }
     }
 
-    fn valid_token(&mut self, input: &str) -> Option<Token> {
-        let next = input.chars().next().unwrap();
-        let (len, kind) = if next.is_whitespace() {
-            (
-                input
-                    .char_indices()
-                    .take_while(|(_, c)| c.is_whitespace())
-                    .last()
-                    .unwrap()
-                    .0
-                    + 1,
-                T![ws],
-            )
+    pub fn is_eof(&self) -> bool {
+        self.parse_point.position >= self.input.len()
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        if self.is_eof() {
+            None
         } else {
-            self.rules
-                .iter()
-                .rev()
-                .filter_map(|rule| Some(((rule.matches)(input)?, rule.kind)))
-                .max_by_key(|&(len, _)| len)?
+            Some(self.input[self.parse_point.position] as char)
+        }
+    }
+
+    fn skip_char(&mut self) {
+        assert!(!self.is_eof());
+
+        let x = self.parse_point.position;
+        self.parse_point.position += 1;
+        if self.input[x] as char == '\n' {
+            self.parse_point.line_number += 1;
+            self.parse_point.line_start = x;
+        }
+    }
+
+    fn skip_whitespaces(&mut self) {
+        while let Some(c) = self.peek_char() {
+            if c.is_whitespace() {
+                self.skip_char()
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn skip_prefix(&mut self, prefix: &str) -> bool {
+        let saved_point = self.parse_point;
+        let mut ptr = 0;
+
+        while ptr < prefix.len() {
+            let Some(x) = self.peek_char() else {
+                self.parse_point = saved_point;
+                return false;
+            };
+
+            if x != prefix.chars().nth(ptr).unwrap() {
+                self.parse_point = saved_point;
+                return false;
+            }
+
+            self.skip_char();
+            ptr += 1;
+        }
+
+        true
+    }
+
+    fn skip_until(&mut self, prefix: &str) {
+        while !self.is_eof() && !self.skip_prefix(prefix) {
+            self.skip_char();
+        }
+    }
+
+    fn parse_number(&mut self, radix: Radix) -> Option<()> {
+        while let Some(x) = self.peek_char() {
+            let Some(d) = x.to_digit(radix as u32) else {
+                break;
+            };
+
+            let Some(r) = self.int_number.checked_mul(radix as u64) else {
+                // TODO: give error report
+                return None;
+            };
+            self.int_number = r;
+
+            let Some(r) = self.int_number.checked_add(d as u64) else {
+                // TODO: give error report
+                return None;
+            };
+            self.int_number = r;
+            self.skip_char();
+        }
+
+        Some(())
+    }
+
+    fn parse_string(&mut self, delim: char) -> Option<()> {
+        while let Some(x) = self.peek_char() {
+            match x {
+                x if x == '\\' => {
+                    self.skip_char();
+                    let Some(x) = self.peek_char() else {
+                        return None;
+                    };
+                    let x = match x {
+                        '0' => '\0',
+                        'n' => '\n',
+                        't' => '\t',
+                        'r' => '\r',
+                        x if x == delim => delim,
+                        '\\' => '\\',
+                        _ => {
+                            // TODO: add error message
+                            return None;
+                        }
+                    };
+
+                    self.string.push(x);
+                    self.skip_char();
+                }
+                x if x == delim => break,
+                _ => {
+                    self.string.push(x);
+                    self.skip_char();
+                }
+            }
+        }
+
+        todo!()
+    }
+
+    pub fn next_token(&mut self) -> Token {
+        'comment: loop {
+            self.skip_whitespaces();
+
+            // This is the comment prefix so we skip everything starting at this point
+            if self.skip_prefix("<(-.-)>") {
+                self.skip_until("\n");
+                continue 'comment;
+            }
+
+            break 'comment;
+        }
+
+        let Some(x) = self.peek_char() else {
+            self.has_eof = true;
+            return Token::new(
+                T![EOF],
+                Span {
+                    start: self.parse_point.position,
+                    end: self.parse_point.position,
+                },
+            );
         };
 
-        let start = self.position;
-        self.position += len;
-        Some(Token {
-            kind,
-            span: Span {
-                start,
-                end: start + len,
-            },
-        })
-    }
-
-    fn invalid_token(&mut self, input: &str) -> Token {
-        let start = self.position;
-        let len = input
-            .char_indices()
-            .find(|(pos, _)| self.valid_token(&input[*pos..]).is_some())
-            .map(|(pos, _)| pos)
-            .unwrap_or_else(|| input.len());
-
-        debug_assert!(len <= input.len());
-
-        self.position = start + len;
-        Token {
-            kind: T![err],
-            span: Span {
-                start,
-                end: start + len,
-            },
+        // Check if we have a punctuation
+        {
+            let saved_position = self.parse_point.position;
+            if let Some(&kind) = PUNCTS
+                .iter()
+                .find(|(prefix, _)| self.skip_prefix(prefix))
+                .map(|(_, kind)| kind)
+            {
+                return Token::new(
+                    kind,
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
         }
-    }
 
-    pub fn next_token(&mut self, input: &str) -> Token {
-        self.valid_token(input)
-            .unwrap_or_else(|| self.invalid_token(input))
+        // Check if we have a keyword
+        {
+            let saved_position = self.parse_point.position;
+            if let Some(&kind) = KEYWORDS
+                .iter()
+                .find(|(prefix, _)| self.skip_prefix(prefix))
+                .map(|(_, kind)| kind)
+            {
+                return Token::new(
+                    kind,
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+        }
+
+        // Check if we have an identifier
+        if is_identifier_start(x) {
+            let saved_position = self.parse_point.position;
+            while let Some(x) = self.peek_char() {
+                if is_identifier(x) {
+                    self.skip_char();
+                } else {
+                    break;
+                }
+            }
+
+            return Token::new(
+                T![ID],
+                Span {
+                    start: saved_position,
+                    end: self.parse_point.position,
+                },
+            );
+        }
+
+        // Check if we have a number
+        {
+            let saved_position = self.parse_point.position;
+            if self.skip_prefix("0x") {
+                let Some(_) = self.parse_number(Radix::Hex) else {
+                    return Token::new(
+                        T![ParseError],
+                        Span {
+                            start: self.parse_point.position,
+                            end: self.parse_point.position,
+                        },
+                    );
+                };
+
+                self.int_number = 0;
+                return Token::new(
+                    T![IntLit],
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+
+            if self.skip_prefix("0") {
+                let Some(_) = self.parse_number(Radix::Oct) else {
+                    return Token::new(
+                        T![ParseError],
+                        Span {
+                            start: self.parse_point.position,
+                            end: self.parse_point.position,
+                        },
+                    );
+                };
+
+                self.int_number = 0;
+                return Token::new(
+                    T![IntLit],
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+
+            if x.is_digit(Radix::Dec as u32) {
+                let Some(_) = self.parse_number(Radix::Oct) else {
+                    return Token::new(
+                        T![ParseError],
+                        Span {
+                            start: self.parse_point.position,
+                            end: self.parse_point.position,
+                        },
+                    );
+                };
+
+                self.int_number = 0;
+                return Token::new(
+                    T![IntLit],
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+        }
+
+        // Check if we have a string
+        if x == '"' {
+            let saved_position = self.parse_point.position;
+            self.skip_char();
+            self.string.clear();
+            if self.parse_string('"').is_none() || self.is_eof() {
+                return Token::new(
+                    T![ParseError],
+                    Span {
+                        start: self.parse_point.position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+            self.skip_char();
+            return Token::new(
+                T![String],
+                Span {
+                    start: saved_position,
+                    end: self.parse_point.position,
+                },
+            );
+        }
+
+        if x == '\'' {
+            let saved_position = self.parse_point.position;
+            self.skip_char();
+            self.string.clear();
+            if self.parse_string('\'').is_none() || self.is_eof() {
+                return Token::new(
+                    T![ParseError],
+                    Span {
+                        start: self.parse_point.position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+            self.skip_char();
+
+            let chars: Vec<char> = self.string.chars().collect();
+
+            // TODO: add the error diagnostic and handling
+            if chars.len() != 1 {
+                return Token::new(
+                    T![ParseError],
+                    Span {
+                        start: self.parse_point.position,
+                        end: self.parse_point.position,
+                    },
+                );
+            }
+
+            self.char_lit = chars[0];
+
+            return Token::new(
+                T![CharLit],
+                Span {
+                    start: saved_position,
+                    end: self.parse_point.position,
+                },
+            );
+        }
+
+        self.skip_char();
+        Token::new(
+            T![ParseError],
+            Span {
+                start: self.parse_point.position,
+                end: self.parse_point.position,
+            },
+        )
     }
 
     #[cfg(test)]
@@ -90,22 +392,28 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position >= self.input.len() {
-            if self.eof {
-                return None;
-            }
-            self.eof = true;
-            Some(Token {
-                kind: T![EOF],
-                span: Span {
-                    start: self.position,
-                    end: self.position,
-                },
-            })
+        if self.has_eof {
+            None
         } else {
-            Some(self.next_token(&self.input[self.position..]))
+            Some(self.next_token())
         }
     }
+}
+
+fn is_identifier(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+fn is_identifier_start(c: char) -> bool {
+    c.is_alphabetic() || c == '_'
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy)]
+enum Radix {
+    Oct = 8,
+    Dec = 10,
+    Hex = 16,
 }
 
 #[cfg(test)]
@@ -124,10 +432,10 @@ mod tests {
 
     #[test]
     fn unknown_input() {
-        let input = "$$$$$$+a";
+        let input = "$+a";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize();
-        assert_tokens!(tokens, [T![err], T![ident], T![EOF]]);
+        assert_tokens!(tokens, [T![ParseError], T![ParseError], T![ID], T![EOF]]);
     }
 
     #[test]
@@ -137,7 +445,15 @@ mod tests {
         let tokens = lexer.tokenize();
         assert_tokens!(
             tokens,
-            [T![ws], T![err], T![ws], T![err], T![ws], T![err], T![EOF]]
+            [
+                T![ParseError],
+                T![ParseError],
+                T![ParseError],
+                T![ParseError],
+                T![ParseError],
+                T![ParseError],
+                T![EOF]
+            ]
         );
     }
 
@@ -151,20 +467,17 @@ mod tests {
         "#;
         let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
-        let tokens: Vec<_> = lexer
-            .tokenize()
-            .into_iter()
-            .filter(|t| t.kind != T![ws])
-            .collect();
+        let tokens: Vec<_> = lexer.tokenize();
+        println!("{:?}", tokens);
         assert_tokens!(
             tokens,
             [
-                T![start],
-                T![let],
-                T![ident],
-                T![init],
-                T![int],
-                T![end],
+                T![OProgram],
+                T![Let],
+                T![ID],
+                T![Assign],
+                T![IntLit],
+                T![CProgram],
                 T![EOF]
             ]
         );
@@ -182,22 +495,18 @@ mod tests {
         "#;
         let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
-        let tokens: Vec<_> = lexer
-            .tokenize()
-            .into_iter()
-            .filter(|t| t.kind != T![ws])
-            .collect();
+        let tokens: Vec<_> = lexer.tokenize();
         assert_tokens!(
             tokens,
             [
-                T![start],
-                T![let],
-                T![ident],
-                T![init],
-                T![int],
-                T![print],
-                T![ident],
-                T![end],
+                T![OProgram],
+                T![Let],
+                T![ID],
+                T![Assign],
+                T![IntLit],
+                T![Print],
+                T![ID],
+                T![CProgram],
                 T![EOF]
             ]
         );

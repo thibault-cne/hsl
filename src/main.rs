@@ -1,17 +1,14 @@
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 mod lexer;
 
-mod asm;
+//mod asm;
 mod option;
-mod parser;
+// mod parser;
 
 use core::panic;
 use std::env;
 
-use asm::Compiler;
+//use asm::Compiler;
 
 fn main() {
     use std::process::exit;
@@ -28,22 +25,22 @@ fn main() {
 
     let content = std::fs::read_to_string(&options.source).expect("not found");
 
-    let mut parser = parser::Parser::new(&content);
-    let program = parser.parse();
+    // let mut parser = parser::Parser::new(&content);
+    // let program = parser.parse();
 
-    println!("{:?}", program);
+    // println!("{:?}", program);
 
-    let mut builder = parser::slt::Builder::new();
-    let mut slt = builder.region();
+    // let mut builder = parser::slt::Builder::new();
+    // let mut slt = builder.region();
 
-    program.visit(&mut builder, &mut slt);
+    // program.visit(&mut builder, &mut slt);
 
-    println!("{:?}", slt);
+    // println!("{:?}", slt);
 
-    let file = std::fs::File::create(&options.output).expect("unable to create a new file");
+    // let file = std::fs::File::create(&options.output).expect("unable to create a new file");
 
-    asm::evaluate(vec![program], &(&slt).into(), asm::A64Compiler::new(file))
-        .expect("unable to compile");
+    // asm::evaluate(vec![program], &(&slt).into(), asm::A64Compiler::new(file))
+    //     .expect("unable to compile");
 }
 
 mod exit {

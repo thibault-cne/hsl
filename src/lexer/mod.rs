@@ -159,7 +159,7 @@ impl<'input> Lexer<'input> {
             }
         }
 
-        todo!()
+        Some(())
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -504,6 +504,35 @@ mod tests {
                 T![ID],
                 T![Assign],
                 T![IntLit],
+                T![Print],
+                T![ID],
+                T![CProgram],
+                T![EOF]
+            ]
+        );
+    }
+
+    #[test]
+    fn keywords_with_print_call_string() {
+        let input = r#"
+            A long time ago in a galaxy far, far away...
+                I am a big deal in the resistance. finn
+                Who, mesa ? "Finn"
+
+                You're eyes can deceive you; don't trust them. finn
+            May the force be with you.
+        "#;
+        let input = unindent::unindent(input);
+        let mut lexer = Lexer::new(&input);
+        let tokens: Vec<_> = lexer.tokenize();
+        assert_tokens!(
+            tokens,
+            [
+                T![OProgram],
+                T![Let],
+                T![ID],
+                T![Assign],
+                T![String],
                 T![Print],
                 T![ID],
                 T![CProgram],

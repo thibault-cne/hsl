@@ -484,13 +484,15 @@ mod tests {
     }
 
     #[test]
-    fn keywords_with_print_call() {
+    fn keywords_with_print_call_integer() {
         let input = r#"
             A long time ago in a galaxy far, far away...
                 I am a big deal in the resistance. finn
                 Who, mesa ? 10
 
-                You're eyes can deceive you; don't trust them. finn
+                Execute order print
+                    finn
+                Order executed
             May the force be with you.
         "#;
         let input = unindent::unindent(input);
@@ -504,8 +506,10 @@ mod tests {
                 T![ID],
                 T![Assign],
                 T![IntLit],
-                T![Print],
+                T![OFnCall],
                 T![ID],
+                T![ID],
+                T![CFnCall],
                 T![CProgram],
                 T![EOF]
             ]
@@ -519,7 +523,9 @@ mod tests {
                 I am a big deal in the resistance. finn
                 Who, mesa ? "Finn"
 
-                You're eyes can deceive you; don't trust them. finn
+                Execute order print
+                    finn
+                Order executed
             May the force be with you.
         "#;
         let input = unindent::unindent(input);
@@ -533,8 +539,10 @@ mod tests {
                 T![ID],
                 T![Assign],
                 T![String],
-                T![Print],
+                T![OFnCall],
                 T![ID],
+                T![ID],
+                T![CFnCall],
                 T![CProgram],
                 T![EOF]
             ]

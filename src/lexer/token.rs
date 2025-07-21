@@ -8,7 +8,8 @@ macro_rules! T {
     [String] => { $crate::lexer::token::TokenKind::String };
     [CharLit] => { $crate::lexer::token::TokenKind::CharLit };
     [IntLit] => { $crate::lexer::token::TokenKind::IntLit };
-    [Boolean] => { $crate::lexer::token::TokenKind::Boolean };
+    [True] => { $crate::lexer::token::TokenKind::True };
+    [False] => { $crate::lexer::token::TokenKind::False };
     [OParen] => { $crate::lexer::token::TokenKind::OParen };
     [CParen] => { $crate::lexer::token::TokenKind::CParen };
     [Dot] => { $crate::lexer::token::TokenKind::Dot };
@@ -36,7 +37,8 @@ macro_rules! T {
     [Let] => { $crate::lexer::token::TokenKind::Let };
     [OProgram] => { $crate::lexer::token::TokenKind::OProgram };
     [CProgram] => { $crate::lexer::token::TokenKind::CProgram };
-    [Print] => { $crate::lexer::token::TokenKind::Print };
+    [OFnCall] => { $crate::lexer::token::TokenKind::OFnCall };
+    [CFnCall] => { $crate::lexer::token::TokenKind::CFnCall };
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -82,7 +84,8 @@ pub enum TokenKind {
     String,
     CharLit,
     IntLit,
-    Boolean,
+    True,
+    False,
 
     // Puncts
     OParen,
@@ -114,7 +117,8 @@ pub enum TokenKind {
     Let,
     OProgram,
     CProgram,
-    Print,
+    OFnCall,
+    CFnCall,
 }
 
 impl fmt::Display for TokenKind {
@@ -129,7 +133,8 @@ impl fmt::Display for TokenKind {
                 T![String] => "String",
                 T![CharLit] => "Char literal",
                 T![IntLit] => "Integer literal",
-                T![Boolean] => "Boolean",
+                T![True] => "True",
+                T![False] => "False",
                 T![OParen] => "Open parenthesis",
                 T![CParen] => "Close parenthesis",
                 T![Dot] => "Dot",
@@ -157,7 +162,8 @@ impl fmt::Display for TokenKind {
                 T![Let] => "Let",
                 T![OProgram] => "Opening program",
                 T![CProgram] => "Closing program",
-                T![Print] => "Print",
+                T![OFnCall] => "Opening function call",
+                T![CFnCall] => "Closing function call",
             }
         )
     }

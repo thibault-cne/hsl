@@ -2,8 +2,9 @@
 mod lexer;
 
 //mod asm;
+mod ir;
 mod option;
-// mod parser;
+mod parser;
 
 use core::panic;
 use std::env;

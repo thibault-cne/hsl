@@ -8,13 +8,13 @@ pub const PUNCTS: &[(&'static str, super::token::TokenKind)] = &[
         T![Plus],
     ),
     ("-", T![Not]),
-    ("From a certain point of view.", T![Boolean]),
-    ("That's impossible!", T![Boolean]),
+    ("From a certain point of view.", T![True]),
+    ("That's impossible!", T![False]),
 ];
 
 pub const KEYWORDS: &[(&'static str, super::token::TokenKind)] = &[
-    ("You're eyes can deceive you; don't trust them.", T![Print]),
-    ("You'll find I'm full of surprises.", T![Print]),
+    ("Execute order", T![OFnCall]),
+    ("Order executed", T![CFnCall]),
     ("A long time ago in a galaxy far, far away...", T![OProgram]),
     ("May the force be with you.", T![CProgram]),
     ("Do, or do not. There is no try.", T![If]),

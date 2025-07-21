@@ -1,14 +1,12 @@
-use crate::{
-    lexer::token::{Token, TokenKind},
-    lexer::Lexer,
-};
+use crate::ir::Program;
+use crate::lexer::token::{Token, TokenKind};
+use crate::lexer::Lexer;
 
-pub(crate) mod ast;
-pub(crate) mod expression;
-pub(crate) mod item;
+pub mod expression;
 pub mod literal;
-pub(crate) mod slt;
-pub(crate) mod statement;
+pub mod program;
+pub mod slt;
+pub mod statement;
 
 pub struct Parser<'input, I>
 where
@@ -18,11 +16,11 @@ where
     tokens: std::iter::Peekable<I>,
 }
 
-impl<'input> Parser<'input, TokenIter<'input>> {
-    pub fn new(input: &'input str) -> Parser<TokenIter> {
+impl<'input> Parser<'input, Lexer<'input>> {
+    pub fn new(input: &'input str) -> Self {
         Parser {
             input,
-            tokens: TokenIter::new(input).peekable(),
+            tokens: Lexer::new(input).peekable(),
         }
     }
 }
@@ -36,16 +34,17 @@ where
         token.text(self.input)
     }
 
-    pub(crate) fn peek(&mut self) -> TokenKind {
-        self.tokens
-            .peek()
-            .map(|token| token.kind)
-            .unwrap_or(T![EOF])
+    pub(crate) fn peek(&mut self) -> Option<TokenKind> {
+        self.tokens.peek().map(|t| t.kind)
     }
 
     /// Check if the next token is of a given kind
-    pub(crate) fn at(&mut self, kind: TokenKind) -> bool {
-        self.peek() == kind
+    pub(crate) fn check_next(&mut self, kind: TokenKind) -> bool {
+        let Some(t_kind) = self.peek() else {
+            return false;
+        };
+
+        t_kind == kind
     }
 
     pub(crate) fn next(&mut self) -> Option<Token> {
@@ -72,46 +71,18 @@ where
         );
     }
 
-    pub(crate) fn parse(&mut self) -> ast::Item {
+    pub(crate) fn parse(&mut self) -> Program {
         // TODO: parse functions declaration before
-        while !self.at(T![start]) {
-            self.next();
-        }
-        self.consume(T![start]);
+        self.consume(T![OProgram]);
 
-        let mut body = Vec::new();
-        while !self.at(T![end]) {
-            body.push(self.statement());
+        let mut stmts = Vec::new();
+        while !self.check_next(T![CProgram]) {
+            stmts.push(self.statement());
         }
 
-        self.consume(T![end]);
+        self.consume(T![CProgram]);
         self.consume(T![EOF]);
 
-        ast::Item::Main { body }
-    }
-}
-
-pub struct TokenIter<'input> {
-    lexer: Lexer<'input>,
-}
-
-impl<'input> TokenIter<'input> {
-    pub fn new(input: &'input str) -> TokenIter {
-        TokenIter {
-            lexer: Lexer::new(input),
-        }
-    }
-}
-
-impl<'input> Iterator for TokenIter<'input> {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let next_token = self.lexer.next()?;
-            if !matches!(next_token.kind, T![ws] | T![comment]) {
-                return Some(next_token);
-            }
-        }
+        Program { stmts }
     }
 }

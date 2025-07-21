@@ -4,19 +4,24 @@ statements = { statement };
 
 statement = NEWLINE
 	| decl-statement
-	| print-statement
+	| func-call
 	| assign-statement;
 
 decl-statement = LET WS? id NEWLINE? ASSIGN WS? expression;
-print-statement = PRINT WS? expression;
 assign-statement = OASSIGN WS? id assign-statements CASSIGN;
+func-call = OFUNC-CALL WS? id func-args CFUNC-CALL;
 
-assign-statements = NEWLINE
+assign-statements = { assign-stmt };
+assign-stmt = NEWLINE
 	| ADD WS? integer
 	| MUL WS? integer
 	| MOD WS? integer
 	| SUB WS? integer
 	| DIV WS? integer;
+
+func-args = { func-arg }
+func-arg = NEWLINE
+    | expression;
 
 expression = id | literal;
 
@@ -63,9 +68,10 @@ UPPER-CASE = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "
 LOWER-CASE = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z";
 BIN-DIGIT = "0" | "1";
 
+OFUNC-CALL = "Execute order";
+CFUNC-CALL = "Order executed";
 OASSIGN = "What a piece of junk!";
 CASSIGN = "The garbage will do.";
-PRINT = "You'll find I'm full of surprises." | "You're eyes can deceive you; don't trust them.";
 ASSIGN =  "I am your father."
 	| "Judge me by my size, do you ?";
 LET =  "I am a big deal in the resistance."

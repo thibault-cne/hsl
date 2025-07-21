@@ -1,39 +1,44 @@
+use crate::ir::Lit;
 use crate::lexer::token::Token;
 
-use super::{ast, Parser};
+use super::Parser;
 
 impl<'input, I> Parser<'input, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn literal(&mut self) -> ast::Lit {
-        match self.peek() {
-            lit @ T![string] | lit @ T![int] | lit @ T![bool] | lit @ T![neg] => {
-                if lit == T![neg] {
-                    self.consume(T![neg]);
-                }
+    pub fn literal(&mut self) -> Lit {
+        let Some(kind) = self.peek() else {
+            panic!("expected a literal but got nothing");
+        };
 
-                let literal_text = {
-                    let literal_token = self.next().unwrap();
-                    self.text(literal_token)
-                };
-
-                match lit {
-                    T![int] => {
-                        ast::Lit::Int(literal_text.parse().unwrap_or_else(|_| {
-                            panic!("Invalid integer literal: `{}`", literal_text)
-                        }))
-                    }
-                    T![neg] => ast::Lit::NegInt(literal_text.parse().unwrap_or_else(|_| {
-                        panic!("Invalid negative integer literal: `{}`", literal_text)
-                    })),
-                    T![string] => {
-                        ast::Lit::Str(literal_text[1..(literal_text.len() - 1)].to_string())
-                    }
-                    T![bool] => ast::Lit::Bool(literal_text != "That's impossible!"),
-                    _ => unreachable!(),
-                }
+        match kind {
+            T![String] => {
+                let tok = self.next().unwrap();
+                let str = self.text(tok);
+                Lit::Str(str[1..(str.len() - 1)].to_string())
             }
+            T![Not] => {
+                self.consume(T![Not]);
+                self.check_next(T![IntLit]);
+                let tok = self.next().unwrap();
+                let str = self.text(tok);
+                Lit::Int(
+                    -1 * str
+                        .parse::<i64>()
+                        .unwrap_or_else(|_| panic!("invalid negative integer literal: `{}`", str)),
+                )
+            }
+            T![IntLit] => {
+                let tok = self.next().unwrap();
+                let str = self.text(tok);
+                Lit::Int(
+                    str.parse()
+                        .unwrap_or_else(|_| panic!("invalid integer literal: `{}`", str)),
+                )
+            }
+            T![True] => Lit::Bool(true),
+            T![False] => Lit::Bool(false),
             kind => panic!("Unknown start of expression: `{}`", kind),
         }
     }

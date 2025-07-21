@@ -11,7 +11,7 @@ A long time ago in a galaxy far, far away...            <(-.-)> Start of a progr
     That's one hell of a pilot. first_order
     Judge me by my size, do you ? "This is the first order"
 
-    You'll find I'm full of surprises. first_order
+    You'll find I'm full of surprises. first_order      <(-.-)> Prints the variable first_order - Luke Skywalker The Empire Strikes Back
 
     You'll find I'm full of surprises. finn             <(-.-)> Prints the variable finn - Luke Skywalker The Empire Strikes Back
 

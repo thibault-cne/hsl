@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+pub trait Visitor {
+    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable);
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct SymbolLookupTable {
     pub variables: HashMap<String, Variable>,
@@ -23,15 +27,7 @@ impl SymbolLookupTable {
         self.offset -= 16;
     }
 
-    pub fn add_negative_integer(&mut self, name: &str, i: u32) {
-        self.variables.insert(
-            name.to_string(),
-            Variable::new(self.offset, Value::NegInt(i), self.scope),
-        );
-        self.offset -= 16;
-    }
-
-    pub fn add_integer(&mut self, name: &str, i: u32) {
+    pub fn add_integer(&mut self, name: &str, i: i64) {
         self.variables.insert(
             name.to_string(),
             Variable::new(self.offset, Value::Int(i), self.scope),
@@ -84,8 +80,7 @@ impl Variable {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Str(String),
-    Int(u32),
-    NegInt(u32),
+    Int(i64),
     Bool(bool),
 }
 

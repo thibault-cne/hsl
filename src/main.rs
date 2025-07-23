@@ -1,49 +1,86 @@
 #[macro_use]
 mod lexer;
 
+#[macro_use]
+mod macros;
+
 //mod asm;
+mod codegen;
+mod command;
+mod flags;
 mod ir;
-mod option;
 mod parser;
+mod target;
 
-use core::panic;
-use std::env;
+use codegen::Compiler;
+use parser::slt::Visitor;
 
-//use asm::Compiler;
+/// The help string.
+/// This string is printed when the user asks for help.
+static USAGE: &str = "Usage: 
+    hsl [options]
+
+META OPTIONS
+    -h, --help          show this!
+    -v, --version       show the version of search
+
+COMPILATION OPTIONS
+    -s, --source        the source file to compile
+    -o, --output        the output file to produce
+    -t, --target        the targeted architecture (must be in [armv8, armv7, x86])
+";
 
 fn main() {
-    use std::process::exit;
-
-    let args: Vec<_> = env::args_os().skip(1).collect();
-    let options = match option::Option::parse(args.iter().map(std::convert::AsRef::as_ref)) {
-        option::OptionsResult::Ok(o, _) => o,
-        option::OptionsResult::InvalidOptions(e) => panic!("Error while parsing args: {:?}", e),
-        option::OptionsResult::Help(help) => {
-            println!("{}", help);
-            exit(exit::SUCCESS);
-        }
+    let default_target = if cfg!(target_arch = "aarch64") && cfg!(target_os = "macos") {
+        Some(target::Target::AArch64Darwin)
+    } else {
+        None
     };
 
-    let content = std::fs::read_to_string(&options.source).expect("not found");
+    // Parse flags passed to the compiler
+    let flags = flags::Flags::parse(default_target.map(|d| d.name()));
 
-    // let mut parser = parser::Parser::new(&content);
-    // let program = parser.parse();
+    if flags.help {
+        println!("{}", USAGE);
+        std::process::exit(exit::SUCCESS);
+    }
 
-    // println!("{:?}", program);
+    if flags.source_files.is_empty() {
+        todo!()
+    }
 
-    // let mut builder = parser::slt::Builder::new();
-    // let mut slt = builder.region();
+    let Some(target) = flags.target_name.and_then(target::Target::by_name) else {
+        println!("{}", USAGE);
+        std::process::exit(exit::ERROR);
+    };
 
-    // program.visit(&mut builder, &mut slt);
+    let Some(ouput_file) = flags.output_path else {
+        println!("{}", USAGE);
+        std::process::exit(exit::ERROR);
+    };
 
-    // println!("{:?}", slt);
+    // We are sure that `flags.source_files` is not empty
+    let content = std::fs::read_to_string(flags.source_files[0]).expect("unable to read file");
 
-    // let file = std::fs::File::create(&options.output).expect("unable to create a new file");
+    let mut parser = parser::Parser::new(&content);
+    let program = parser.parse();
 
-    // asm::evaluate(vec![program], &(&slt).into(), asm::A64Compiler::new(file))
-    //     .expect("unable to compile");
+    let mut builder = parser::slt::Builder::new();
+    let mut slt = builder.region();
+
+    program.visit(&mut builder, &mut slt);
+
+    let mut cmd = command::Cmd::new();
+    let mut compiler = codegen::build_compiler(target, ouput_file);
+
+    // Generate the program
+    compiler.generate_program(&program, &(&slt).into(), &mut cmd);
+
+    // If run option unabled than run the program
+    compiler.run_program(&mut cmd);
 }
 
 mod exit {
     pub const SUCCESS: i32 = 0;
+    pub const ERROR: i32 = 1;
 }

@@ -30,7 +30,7 @@ COMPILATION OPTIONS
     -t, --target        the targeted architecture (must be in [armv8, armv7, x86])
 ";
 
-fn main() {
+fn main() -> std::process::ExitCode {
     let default_target = if cfg!(target_arch = "aarch64") && cfg!(target_os = "macos") {
         Some(target::Target::AArch64Darwin)
     } else {
@@ -42,7 +42,7 @@ fn main() {
 
     if flags.help {
         println!("{}", USAGE);
-        std::process::exit(exit::SUCCESS);
+        return std::process::ExitCode::SUCCESS;
     }
 
     if flags.source_files.is_empty() {
@@ -51,12 +51,12 @@ fn main() {
 
     let Some(target) = flags.target_name.and_then(target::Target::by_name) else {
         println!("{}", USAGE);
-        std::process::exit(exit::ERROR);
+        return std::process::ExitCode::FAILURE;
     };
 
     let Some(ouput_file) = flags.output_path else {
         println!("{}", USAGE);
-        std::process::exit(exit::ERROR);
+        return std::process::ExitCode::FAILURE;
     };
 
     // We are sure that `flags.source_files` is not empty
@@ -74,13 +74,12 @@ fn main() {
     let mut compiler = codegen::build_compiler(target, ouput_file);
 
     // Generate the program
-    compiler.generate_program(&program, &(&slt).into(), &mut cmd);
+    // TODO: handle error
+    let _ = compiler.generate_program(&program, &(&slt).into(), &mut cmd);
 
     // If run option unabled than run the program
-    compiler.run_program(&mut cmd);
-}
+    // TODO: handle error
+    let _ = compiler.run_program(&mut cmd);
 
-mod exit {
-    pub const SUCCESS: i32 = 0;
-    pub const ERROR: i32 = 1;
+    std::process::ExitCode::SUCCESS
 }

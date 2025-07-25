@@ -8,8 +8,6 @@ pub const PUNCTS: &[(&'static str, super::token::TokenKind)] = &[
         T![Plus],
     ),
     ("-", T![Not]),
-    ("From a certain point of view.", T![True]),
-    ("That's impossible!", T![False]),
 ];
 
 pub const KEYWORDS: &[(&'static str, super::token::TokenKind)] = &[
@@ -28,4 +26,6 @@ pub const KEYWORDS: &[(&'static str, super::token::TokenKind)] = &[
     ("I am a big deal in the resistance.", T![Let]),
     ("The force is strong with this one.", T![Let]),
     ("That's one hell of a pilot.", T![Let]),
+    ("From a certain point of view.", T![True]),
+    ("That's impossible!", T![False]),
 ];

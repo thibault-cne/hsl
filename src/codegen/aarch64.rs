@@ -22,11 +22,18 @@ impl<W: io::Write> codegen::Compiler for Compiler<W> {
         program: &crate::ir::Program,
         slt: &crate::parser::slt::NavigableSlt<'_>,
         cmd: &mut crate::command::Cmd,
-    ) {
-        todo!()
+    ) -> codegen::error::Result<()> {
+        result! {
+            write!(self.writer, ".global _start\n.align 2\n_start:\n");
+            write!(self.writer, "    // Program header\n");
+            write!(self.writer, "    stp x29, lr, [sp, -0x10]!");
+            write!(self.writer, "    mov x29, sp");
+        };
+
+        Ok(())
     }
 
-    fn run_program(&mut self, cmd: &mut crate::command::Cmd) {
+    fn run_program(&mut self, cmd: &mut crate::command::Cmd) -> codegen::error::Result<()> {
         todo!()
     }
 }

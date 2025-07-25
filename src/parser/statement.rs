@@ -41,8 +41,11 @@ where
                 );
 
                 let mut args = Vec::new();
-                args.push(self.expression());
+                while !self.check_next(T![CFnCall]) {
+                    args.push(self.expression());
+                }
 
+                self.consume(T![CFnCall]);
                 Stmt::FnCall {
                     id: self.text(ident).to_string(),
                     args,

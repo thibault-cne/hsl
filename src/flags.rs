@@ -30,8 +30,27 @@ impl Flags {
             // We have that start of a flag so we parse it
             if arg.starts_with("-") {
                 flags.parse_arg(&mut args, arg);
+            } else {
+                // We met the end of the arguments the rest should be input files
+                // Just don't forget to add the current arg to the source files
+                if !arg.ends_with(".hs") {
+                    todo!()
+                } else {
+                    flags.source_files.push(arg.leak());
+                }
+                break 'args;
             }
         }
+
+        // Add the rest of the arguments as input files
+        args.for_each(|a| {
+            // Check if the file as the correct extension else raise an error
+            if !a.ends_with(".hs") {
+                todo!()
+            } else {
+                flags.source_files.push(a.leak());
+            }
+        });
 
         flags
     }
@@ -83,16 +102,6 @@ impl Flags {
                 _ => ptr += 1,
             }
         }
-
-        // Add the rest of the arguments as input files
-        args.for_each(|a| {
-            // Check if the file as the correct extension else raise an error
-            if !a.ends_with(".hsl") {
-                todo!()
-            } else {
-                self.source_files.push(a.leak());
-            }
-        });
     }
 }
 

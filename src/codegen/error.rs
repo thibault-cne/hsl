@@ -79,8 +79,18 @@ macro_rules! error {
     }};
 }
 
-macro_rules! result {
+/// Map a list of expressions that returns a result to `$crate::codegen::error::Result<T>`
+macro_rules! map_err {
     (@munch ) => {};
+    (@munch $expr:expr) => {
+            {
+                let res = $expr;
+                res.map_err(|err| {
+                    let loc = $crate::codegen::error::Location::new(file!(), line!());
+                    Into::<$crate::codegen::error::Error>::into((err, loc))
+                })
+            }
+    };
     (@munch $expr:expr; $($tt:tt)*) => {
             {
                 let res = $expr;
@@ -89,9 +99,9 @@ macro_rules! result {
                     Into::<$crate::codegen::error::Error>::into((err, loc))
                 })?;
             }
-            result! { @munch $($tt)* }
+            map_err! { @munch $($tt)* }
     };
     ($($tt:tt)*) => {
-        result! { @munch $($tt)* };
+        map_err! { @munch $($tt)* }
     }
 }

@@ -69,17 +69,20 @@ fn main() -> std::process::ExitCode {
     let mut slt = builder.region();
 
     program.visit(&mut builder, &mut slt);
+    let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
     let mut cmd = command::Cmd::new();
     let mut compiler = codegen::build_compiler(target, ouput_file);
 
     // Generate the program
     // TODO: handle error
-    let _ = compiler.generate_program(&program, &(&slt).into(), &mut cmd);
+    let _ = compiler.generate_program(&program, &nav_slt, &mut cmd);
 
     // If run option unabled than run the program
     // TODO: handle error
-    let _ = compiler.run_program(&mut cmd);
+    if flags.run {
+        let _ = compiler.run_program(&mut cmd);
+    }
 
     std::process::ExitCode::SUCCESS
 }

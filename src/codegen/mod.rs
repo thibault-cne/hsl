@@ -7,17 +7,20 @@ pub mod error;
 
 pub mod aarch64;
 
-pub trait Compiler {
+pub trait Compiler<'prog> {
     fn generate_program(
         &mut self,
-        program: &ir::Program,
-        slt: &NavigableSlt<'_>,
+        program: &'prog ir::Program,
+        slt: &'prog NavigableSlt<'_>,
         cmd: &mut Cmd,
     ) -> error::Result<()>;
     fn run_program(&mut self, cmd: &mut Cmd) -> error::Result<()>;
 }
 
-pub fn build_compiler(target: crate::target::Target, output_file: &'static str) -> impl Compiler {
+pub fn build_compiler<'prog>(
+    target: crate::target::Target,
+    output_file: &'static str,
+) -> impl Compiler<'prog> {
     use crate::target::Target::*;
 
     match target {

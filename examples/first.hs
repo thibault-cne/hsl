@@ -17,7 +17,10 @@ A long time ago in a galaxy far, far away...            <(-.-)> Start of a progr
 
     Execute order print                                 <(-.-)> Prints the variables finn, luke and poe
         finn
+    Order executed     
+
+    Execute order print                                 <(-.-)> Prints the variables finn, luke and poe
+        finn
         luke
-        poe
     Order executed     
 May the force be with you.                              <(-.-)> End of the program

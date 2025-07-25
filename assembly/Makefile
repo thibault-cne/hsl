@@ -47,7 +47,7 @@ ${O_PATH}%.o:	${S_PATH}%.s
 
 .SECONDEXPANSION:
 ${JOBS}: job%:	$${OBJS_$$*} build;
-				@${LINKER} -macos_version_min 14.0.0 -o ${B_PATH}${NAME_$*} ${OBJS_$*} ${LDFLAGS}
+				@${LINKER} -macos_version_min 15.0.0 -o ${B_PATH}${NAME_$*} ${OBJS_$*} ${LDFLAGS}
 				@echo ""
 				@echo ${ECHO_FLAG} "${ESC}${BOLD}${ESC}${PURPLE}Building${ESC}${S}${ESC}${S} ${ESC}${IGREY}$@${ESC}${S} 🖥️"
 				@echo ""

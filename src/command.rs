@@ -1,11 +1,11 @@
 use std::process;
 
-pub struct Cmd {
-    inner: Vec<&'static str>,
+pub struct Cmd<'prog> {
+    inner: Vec<&'prog str>,
     quiet: bool,
 }
 
-impl Cmd {
+impl<'prog> Cmd<'prog> {
     pub fn new(quiet: bool) -> Self {
         Self {
             inner: Vec::new(),
@@ -13,7 +13,7 @@ impl Cmd {
         }
     }
 
-    pub fn append(&mut self, cmd: &'static str) -> &mut Self {
+    pub fn append(&mut self, cmd: &'prog str) -> &mut Self {
         self.inner.push(cmd);
         self
     }

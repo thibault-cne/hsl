@@ -12,14 +12,16 @@ pub trait Compiler<'prog> {
         &mut self,
         program: &'prog ir::Program,
         slt: &'prog NavigableSlt<'_>,
-        cmd: &mut Cmd,
+        cmd: &mut Cmd<'prog>,
     ) -> error::Result<()>;
-    fn run_program(&mut self, cmd: &mut Cmd) -> error::Result<()>;
+    fn run_program(&mut self, cmd: &mut Cmd<'prog>) -> error::Result<()>;
 }
 
 pub fn build_compiler<'prog>(
     target: crate::target::Target,
-    output_path: &'static str,
+    output_path: &'prog str,
+    o_path: &'prog str,
+    b_path: &'prog str,
     quiet: bool,
     run: bool,
 ) -> impl Compiler<'prog> {
@@ -29,7 +31,7 @@ pub fn build_compiler<'prog>(
         AArch64Darwin => {
             let output_file_writer =
                 std::fs::File::create(output_path).expect("unable to create output file");
-            aarch64::Compiler::new(output_path, quiet, run, output_file_writer)
+            aarch64::Compiler::new(output_path, o_path, b_path, quiet, run, output_file_writer)
         }
     }
 }

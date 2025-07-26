@@ -5,7 +5,9 @@ use crate::ir::{Expr, Lit, Stmt};
 
 pub struct Compiler<'prog, W> {
     // Inputs
-    output_path: &'static str,
+    output_path: &'prog str,
+    o_path: &'prog str,
+    b_path: &'prog str,
     quiet: bool,
     run: bool,
 
@@ -18,9 +20,18 @@ pub struct Compiler<'prog, W> {
 }
 
 impl<'prog, W: io::Write> Compiler<'prog, W> {
-    pub fn new(output_path: &'static str, quiet: bool, run: bool, writer: W) -> Self {
+    pub fn new(
+        output_path: &'prog str,
+        o_path: &'prog str,
+        b_path: &'prog str,
+        quiet: bool,
+        run: bool,
+        writer: W,
+    ) -> Self {
         Self {
             output_path,
+            o_path,
+            b_path,
             quiet,
             run,
 
@@ -38,7 +49,7 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
         &mut self,
         program: &'prog crate::ir::Program,
         slt: &'prog crate::parser::slt::NavigableSlt<'prog>,
-        cmd: &mut crate::command::Cmd,
+        cmd: &mut crate::command::Cmd<'prog>,
     ) -> codegen::error::Result<()> {
         map_err! {
             write!(self.writer, ".global _main\n.align 2\n_main:\n");
@@ -83,9 +94,15 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
             }
         }
 
-        cmd_append!(cmd, "as", "-o", "test.o", self.output_path);
+        // Ensures that the writer has been flushed
+        map_err! {
+            self.writer.flush();
+        }
+
+        info!("generated {}", self.output_path);
+        cmd_append!(cmd, "as", "-o", self.o_path, self.output_path);
         let _ = cmd.run_and_reset();
-        cmd_append!(cmd, "cc", "-arch", "arm64", "-o", "test", self.output_path);
+        cmd_append!(cmd, "cc", "-arch", "arm64", "-o", self.b_path, self.o_path);
         let _ = cmd.run_and_reset();
 
         Ok(())

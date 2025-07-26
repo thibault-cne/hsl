@@ -14,6 +14,7 @@ mod command;
 
 mod codegen;
 mod flags;
+mod fs;
 mod ir;
 mod parser;
 mod target;
@@ -65,6 +66,8 @@ fn main() -> std::process::ExitCode {
     };
 
     // We are sure that `flags.source_files` is not empty
+    // TODO: handle multiple files
+    info!("compiling files {}", flags.source_files.join(", "));
     let content = std::fs::read_to_string(flags.source_files[0]).expect("unable to read file");
 
     let mut parser = parser::Parser::new(&content);
@@ -77,7 +80,42 @@ fn main() -> std::process::ExitCode {
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
     let mut cmd = command::Cmd::new(flags.quiet);
-    let mut compiler = codegen::build_compiler(target, ouput_file, flags.quiet, flags.run);
+    let Some(garbage_path) = fs::get_garbage_base(ouput_file) else {
+        error!("unable to find garbage path");
+        return std::process::ExitCode::FAILURE;
+    };
+
+    fs::create_garbage_base(&garbage_path);
+
+    let output_stem = fs::get_file_stem(ouput_file).expect("invalid o path");
+    let g_path = std::path::Path::new(&garbage_path);
+    let output_path = g_path.join(format!("{output_stem}.s")).into_os_string();
+    let o_path = g_path.join(format!("{output_stem}.o")).into_os_string();
+    let b_path = g_path.join(output_stem).into_os_string();
+
+    let Some(output_path_str) = output_path.to_str() else {
+        error!("couldn't format output path");
+        return std::process::ExitCode::FAILURE;
+    };
+
+    let Some(o_path_str) = o_path.to_str() else {
+        error!("couldn't format object path");
+        return std::process::ExitCode::FAILURE;
+    };
+
+    let Some(b_path_str) = b_path.to_str() else {
+        error!("couldn't format build path");
+        return std::process::ExitCode::FAILURE;
+    };
+
+    let mut compiler = codegen::build_compiler(
+        target,
+        &output_path_str,
+        &o_path_str,
+        &b_path_str,
+        flags.quiet,
+        flags.run,
+    );
 
     // Generate the program
     // TODO: handle error

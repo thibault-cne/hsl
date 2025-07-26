@@ -4,9 +4,11 @@ mod lexer;
 #[macro_use]
 mod macros;
 
+#[macro_use]
+mod command;
+
 //mod asm;
 mod codegen;
-mod command;
 mod flags;
 mod ir;
 mod parser;
@@ -71,8 +73,8 @@ fn main() -> std::process::ExitCode {
     program.visit(&mut builder, &mut slt);
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
-    let mut cmd = command::Cmd::new();
-    let mut compiler = codegen::build_compiler(target, ouput_file);
+    let mut cmd = command::Cmd::new(flags.quiet);
+    let mut compiler = codegen::build_compiler(target, ouput_file, flags.quiet, flags.run);
 
     // Generate the program
     // TODO: handle error

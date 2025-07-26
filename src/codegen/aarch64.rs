@@ -4,18 +4,30 @@ use crate::codegen;
 use crate::ir::{Expr, Lit, Stmt};
 
 pub struct Compiler<'prog, W> {
+    // Inputs
+    output_path: &'static str,
+    quiet: bool,
+    run: bool,
+
+    writer: W,
+
+    // State of the compiler
     string_literals: Vec<(&'prog str, &'prog str)>,
     curr_var_id: &'prog str,
-    writer: W,
     fmt_str_cpt: usize,
 }
 
 impl<'prog, W: io::Write> Compiler<'prog, W> {
-    pub fn new(writer: W) -> Self {
+    pub fn new(output_path: &'static str, quiet: bool, run: bool, writer: W) -> Self {
         Self {
+            output_path,
+            quiet,
+            run,
+
+            writer,
+
             string_literals: Vec::new(),
             curr_var_id: "",
-            writer,
             fmt_str_cpt: 0,
         }
     }
@@ -29,13 +41,13 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
         cmd: &mut crate::command::Cmd,
     ) -> codegen::error::Result<()> {
         map_err! {
-            write!(self.writer, ".global _start\n.align 2\n_start:\n");
+            write!(self.writer, ".global _main\n.align 2\n_main:\n");
             write!(self.writer, "    // program header\n");
             write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
             write!(self.writer, "    mov x29, sp\n");
             write!(self.writer, "\n");
             write!(self.writer, "    // jump to the main function\n");
-            write!(self.writer, "    b _main\n");
+            write!(self.writer, "    b _program\n");
             write!(self.writer, "_end:\n");
         };
 
@@ -52,7 +64,7 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
             write!(self.writer, "    mov x16, #1\n");
             write!(self.writer, "    svc 0\n");
             write!(self.writer, "\n");
-            write!(self.writer, "_main:\n");
+            write!(self.writer, "_program:\n");
         }
 
         for stmt in program.stmts.iter() {
@@ -70,6 +82,11 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
                 write!(self.writer, "    {}:\n        .asciz \"{}\"\n", name, s);
             }
         }
+
+        cmd_append!(cmd, "as", "-o", "test.o", self.output_path);
+        let _ = cmd.run_and_reset();
+        cmd_append!(cmd, "cc", "-arch", "arm64", "-o", "test", self.output_path);
+        let _ = cmd.run_and_reset();
 
         Ok(())
     }
@@ -106,6 +123,7 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
         // Allocate stack space for arguments on the stack
         let needed_space = (args.len() / 16 + 1) * 16;
         map_err! {
+            write!(self.writer, "    // allocate needed stack space for print arguments\n");
             write!(self.writer, "    str x8, [sp, -{:#02x}]!\n", needed_space);
         }
 

@@ -1,30 +1,49 @@
 use std::process;
 
-pub struct Cmd(Vec<&'static str>);
+pub struct Cmd {
+    inner: Vec<&'static str>,
+    quiet: bool,
+}
 
 impl Cmd {
-    pub fn new() -> Self {
-        Self(Vec::new())
+    pub fn new(quiet: bool) -> Self {
+        Self {
+            inner: Vec::new(),
+            quiet,
+        }
     }
 
-    pub fn append(mut self, cmd: &'static str) -> Self {
-        self.0.push(cmd);
+    pub fn append(&mut self, cmd: &'static str) -> &mut Self {
+        self.inner.push(cmd);
         self
     }
 
     pub fn run_and_reset(&mut self) -> Result<(), ()> {
-        if self.0.len() < 1 {
+        if !self.quiet {
+            println!("RUNNING: {}", self.inner.join(" "));
+        }
+
+        if self.inner.len() < 1 {
             todo!("error in case the command is incomplete");
         }
 
         // Create the command and run it, with the previous check the first unwrap will never fail
-        process::Command::new(self.0[0])
-            .args(self.0[1..].iter())
+        process::Command::new(self.inner[0])
+            .args(self.inner[1..].iter())
             .output()
             .map_err(|_| ())?;
 
         // Clear the cmd buffer
-        self.0.clear();
+        self.inner.clear();
         Ok(())
     }
+}
+
+macro_rules! cmd_append {
+    ($cmd:ident, $($arg:expr),*) => {
+        $cmd
+        $(
+            .append($arg)
+        )*;
+    };
 }

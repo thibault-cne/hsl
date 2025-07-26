@@ -19,14 +19,17 @@ pub trait Compiler<'prog> {
 
 pub fn build_compiler<'prog>(
     target: crate::target::Target,
-    output_file: &'static str,
+    output_path: &'static str,
+    quiet: bool,
+    run: bool,
 ) -> impl Compiler<'prog> {
     use crate::target::Target::*;
 
     match target {
         AArch64Darwin => {
-            let file = std::fs::File::create(output_file).expect("unable to create output file");
-            aarch64::Compiler::new(file)
+            let output_file_writer =
+                std::fs::File::create(output_path).expect("unable to create output file");
+            aarch64::Compiler::new(output_path, quiet, run, output_file_writer)
         }
     }
 }

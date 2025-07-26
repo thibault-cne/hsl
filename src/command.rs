@@ -20,7 +20,7 @@ impl Cmd {
 
     pub fn run_and_reset(&mut self) -> Result<(), ()> {
         if !self.quiet {
-            println!("RUNNING: {}", self.inner.join(" "));
+            info!("CMD: {}", self.inner.join(" "));
         }
 
         if self.inner.len() < 1 {

@@ -1,3 +1,5 @@
+#![allow(static_mut_refs)]
+
 #[macro_use]
 mod lexer;
 
@@ -5,9 +7,11 @@ mod lexer;
 mod macros;
 
 #[macro_use]
+mod log;
+
+#[macro_use]
 mod command;
 
-//mod asm;
 mod codegen;
 mod flags;
 mod ir;
@@ -24,12 +28,11 @@ static USAGE: &str = "Usage:
 
 META OPTIONS
     -h, --help          show this!
-    -v, --version       show the version of search
 
 COMPILATION OPTIONS
     -s, --source        the source file to compile
     -o, --output        the output file to produce
-    -t, --target        the targeted architecture (must be in [armv8, armv7, x86])
+    -t, --target        the targeted architecture (must be in [armv8])
 ";
 
 fn main() -> std::process::ExitCode {
@@ -43,7 +46,7 @@ fn main() -> std::process::ExitCode {
     let flags = flags::Flags::parse(default_target.map(|d| d.name()));
 
     if flags.help {
-        println!("{}", USAGE);
+        eprint!("{}", USAGE);
         return std::process::ExitCode::SUCCESS;
     }
 
@@ -52,12 +55,12 @@ fn main() -> std::process::ExitCode {
     }
 
     let Some(target) = flags.target_name.and_then(target::Target::by_name) else {
-        println!("{}", USAGE);
+        eprint!("{}", USAGE);
         return std::process::ExitCode::FAILURE;
     };
 
     let Some(ouput_file) = flags.output_path else {
-        println!("{}", USAGE);
+        eprint!("{}", USAGE);
         return std::process::ExitCode::FAILURE;
     };
 
@@ -78,12 +81,17 @@ fn main() -> std::process::ExitCode {
 
     // Generate the program
     // TODO: handle error
-    let _ = compiler.generate_program(&program, &nav_slt, &mut cmd);
+    if compiler
+        .generate_program(&program, &nav_slt, &mut cmd)
+        .is_err()
+    {
+        return std::process::ExitCode::FAILURE;
+    }
 
     // If run option unabled than run the program
     // TODO: handle error
-    if flags.run {
-        let _ = compiler.run_program(&mut cmd);
+    if flags.run && compiler.run_program(&mut cmd).is_err() {
+        return std::process::ExitCode::FAILURE;
     }
 
     std::process::ExitCode::SUCCESS

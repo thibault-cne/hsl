@@ -268,7 +268,7 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
                     };
                 }
                 map_err! {
-                    write!(self.writer, "    ldr x8, [x9, {}]\n", var.offset);
+                    write!(self.writer, "    ldr x8, [x9, -{:#02x}]\n", var.offset * 8);
                     write!(self.writer, "\n")
                 }
             }

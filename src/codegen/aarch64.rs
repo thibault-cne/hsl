@@ -17,6 +17,7 @@ pub struct Compiler<'prog, W> {
     string_literals: Vec<(&'prog str, &'prog str)>,
     curr_var_id: &'prog str,
     fmt_str_cpt: usize,
+    has_stack_room: bool,
 }
 
 impl<'prog, W: io::Write> Compiler<'prog, W> {
@@ -40,6 +41,7 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
             string_literals: Vec::new(),
             curr_var_id: "",
             fmt_str_cpt: 0,
+            has_stack_room: false,
         }
     }
 }
@@ -65,11 +67,13 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
         // TODO: check this unwrap
         let child = slt.childs().next().unwrap();
         let mut program_childs = child.childs();
-        let stack_size = child.slt.variables.len() * 16;
+        // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
+        let var_size = child.slt.variables.len() * 8;
+        let stack_size = crate::math::smallest_multiple_greater_than(16, var_size as _);
 
         map_err! {
             write!(self.writer, "    // pop the stack\n");
-            write!(self.writer, "    add sp, sp, {:#02x} // deallocating {} variables\n", stack_size, stack_size / 16);
+            write!(self.writer, "    add sp, sp, {:#02x} // deallocating {} variables\n", stack_size, var_size / 8);
             write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
             write!(self.writer, "    mov x0, #0\n");
             write!(self.writer, "    mov x16, #1\n");
@@ -145,16 +149,16 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
         }
 
         if id == "print" {
-            let mut arg_cpt = 0;
+            let mut arg_offset = 0;
             for arg in args.iter() {
                 self.generate_expr(&arg, slt)?;
                 map_err! {
                     // Load the argument onto the stack to allow printf to unstack them and print
                     write!(self.writer, "    // load x8 onto the stack\n");
-                    write!(self.writer, "    str x8, [sp, {:#02x}]\n", arg_cpt);
+                    write!(self.writer, "    str x8, [sp, {:#02x}]\n", arg_offset);
                     write!(self.writer, "\n");
                 }
-                arg_cpt += 8;
+                arg_offset += 8;
             }
 
             // Generate the format string
@@ -232,10 +236,6 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
         value: &'prog Expr,
         slt: &crate::parser::slt::NavigableSlt<'prog>,
     ) -> codegen::error::Result<()> {
-        map_err! {
-            write!(self.writer, "    // pushing variable {} to the stack\n", id);
-        };
-
         self.curr_var_id = id;
         self.generate_expr(value, slt)
     }
@@ -273,6 +273,11 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
 
     fn generate_lit(&mut self, lit: &'prog Lit) -> codegen::error::Result<()> {
         use Lit::*;
+
+        map_err! {
+            write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id);
+        }
+
         match lit {
             Int(val) => {
                 map_err! {
@@ -292,8 +297,32 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
                 }
             }
         }
+
+        self.write_newline()?;
+
+        if !self.has_stack_room {
+            self.has_stack_room = true;
+            map_err! {
+                // Allocate two spaces and ensures that the stack is 16 aligned
+                write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
+                write!(self.writer, "    add sp, sp, -0x10\n");
+                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id);
+                write!(self.writer, "    str x8, [sp, 0x8]\n");
+            }
+        } else {
+            self.has_stack_room = false;
+            map_err! {
+                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id);
+                write!(self.writer, "    str x8, [sp, 0x0]\n");
+            }
+        }
+
+        self.write_newline()
+    }
+
+    fn write_newline(&mut self) -> codegen::error::Result<()> {
         map_err! {
-            write!(self.writer, "    str x8, [sp, -0x10]!\n")
+            write!(self.writer, "\n")
         }
     }
 }

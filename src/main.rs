@@ -16,6 +16,7 @@ mod codegen;
 mod flags;
 mod fs;
 mod ir;
+mod math;
 mod parser;
 mod target;
 

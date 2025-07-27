@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+const OFFSET: i32 = 8;
+
 pub trait Visitor {
     fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable);
 }
@@ -24,7 +26,7 @@ impl SymbolLookupTable {
             name.to_string(),
             Variable::new(self.offset, Value::Str(s), self.scope),
         );
-        self.offset -= 16;
+        self.offset -= OFFSET;
     }
 
     pub fn add_integer(&mut self, name: &str, i: i64) {
@@ -32,7 +34,7 @@ impl SymbolLookupTable {
             name.to_string(),
             Variable::new(self.offset, Value::Int(i), self.scope),
         );
-        self.offset -= 16;
+        self.offset -= OFFSET;
     }
 
     pub fn add_boolean(&mut self, name: &str, b: bool) {
@@ -40,7 +42,7 @@ impl SymbolLookupTable {
             name.to_string(),
             Variable::new(self.offset, Value::Bool(b), self.scope),
         );
-        self.offset -= 16;
+        self.offset -= OFFSET;
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
@@ -52,7 +54,7 @@ impl Default for SymbolLookupTable {
     fn default() -> SymbolLookupTable {
         SymbolLookupTable {
             variables: HashMap::new(),
-            offset: -16,
+            offset: -OFFSET,
             region: 0,
             scope: 0,
             children: Vec::new(),

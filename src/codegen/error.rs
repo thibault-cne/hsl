@@ -9,6 +9,7 @@ pub struct Error {
 
 pub enum ErrorKind {
     Io(std::io::Error),
+    CmdError(crate::command::error::Error),
 }
 
 pub struct Location {
@@ -55,7 +56,8 @@ impl fmt::Display for ErrorKind {
         use ErrorKind::*;
 
         match self {
-            Io(kind) => write!(f, "io: {}", kind),
+            Io(kind) => write!(f, "io error: {}", kind),
+            CmdError(err) => write!(f, "cmd error: {}", err),
         }
     }
 }
@@ -68,18 +70,26 @@ impl From<(std::io::Error, Location)> for Error {
     }
 }
 
-macro_rules! error {
+impl From<(crate::command::error::Error, Location)> for Error {
+    fn from(value: (crate::command::error::Error, Location)) -> Self {
+        let (err, loc) = value;
+        let kind = ErrorKind::CmdError(err);
+        Self::new(kind, loc)
+    }
+}
+
+macro_rules! new_error {
     ($kind:tt) => {{
         let loc = $crate::codegen::error::Location::new(file!(), line!());
         $crate::codegen::error::Error::new($kind, loc)
     }};
     (from $err:tt) => {{
         let loc = $crate::codegen::error::Location::new(file!(), line!());
-        $crate::codegen::error::Error::new($err.into(), loc)
+        Into::<$crate::codegen::error::Error>::into(($err, loc))
     }};
 }
 
-/// Map a list of expressions that returns a result to `$crate::codegen::error::Result<T>`
+/// Map a list of expressions that returns a result to `crate::codegen::error::Result<T>`
 macro_rules! map_err {
     (@munch ) => {};
     (@munch $expr:expr) => {

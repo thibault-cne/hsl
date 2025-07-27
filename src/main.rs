@@ -1,13 +1,13 @@
 #![allow(static_mut_refs)]
 
 #[macro_use]
-mod lexer;
-
-#[macro_use]
 mod macros;
 
 #[macro_use]
 mod log;
+
+#[macro_use]
+mod lexer;
 
 #[macro_use]
 mod command;

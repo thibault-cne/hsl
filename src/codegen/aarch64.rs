@@ -105,9 +105,13 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
 
         info!("generated {}", self.output_path);
         cmd_append!(cmd, "as", "-o", self.o_path, self.output_path);
-        let _ = cmd.run_and_reset();
+        if let Err(e) = cmd.run_and_reset() {
+            return Err(new_error!(from e));
+        }
         cmd_append!(cmd, "cc", "-arch", "arm64", "-o", self.b_path, self.o_path);
-        let _ = cmd.run_and_reset();
+        if let Err(e) = cmd.run_and_reset() {
+            return Err(new_error!(from e));
+        }
 
         Ok(())
     }

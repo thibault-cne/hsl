@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::codegen;
-use crate::ir::{Expr, Lit, Stmt};
+use crate::ir::{self, Expr, Lit, Stmt};
 
 pub struct Compiler<'prog, W> {
     // Inputs
@@ -181,16 +181,20 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
         args: &'prog [Expr],
         slt: &crate::parser::slt::NavigableSlt<'prog>,
     ) -> codegen::error::Result<()> {
+        use ir::Lit::*;
+        use Expr::*;
+
         let mut sb = String::new();
 
         args.iter().enumerate().for_each(|(i, arg)| {
             match arg {
-                Expr::Lit(lit) => match lit {
-                    Lit::Int(_) => sb.push_str("%d"),
-                    Lit::Str(_) => sb.push_str("%s"),
-                    Lit::Bool(_) => sb.push_str("%d"),
+                FnCall { .. } => todo!("handle fn return type"),
+                Lit(lit) => match lit {
+                    Int(_) => sb.push_str("%d"),
+                    Str(_) => sb.push_str("%s"),
+                    Bool(_) => sb.push_str("%d"),
                 },
-                Expr::ID(id) => {
+                ID(id) => {
                     // TODO: handle this unwrap
                     let var = slt.find_variable(id).unwrap();
 
@@ -243,6 +247,7 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
     ) -> codegen::error::Result<()> {
         use Expr::*;
         match expr {
+            FnCall { id, args } => self.generate_fn_call(id, args, slt),
             Lit(lit) => self.generate_lit(lit),
             ID(id) => {
                 // TODO: handle this unwrap

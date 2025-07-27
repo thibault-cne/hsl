@@ -1,5 +1,5 @@
 /target
-/.build
+.build
 
 # Ignore arm64.pdf
 arm64.pdf

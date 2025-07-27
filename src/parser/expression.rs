@@ -21,6 +21,29 @@ where
 
                 Expr::ID(name.to_string())
             }
+            T![OFnCall] => {
+                self.consume(T![OFnCall]);
+                let ident = self
+                    .next()
+                    .expect("Expected function identifier in fn call");
+                assert_eq!(
+                    ident.kind,
+                    T![ID],
+                    "Expected identifier after `fn call`, but found `{}`",
+                    ident.kind
+                );
+
+                let mut args = Vec::new();
+                while !self.check_next(T![CFnCall]) {
+                    args.push(self.expression());
+                }
+
+                self.consume(T![CFnCall]);
+                Expr::FnCall {
+                    id: self.text(ident).to_string(),
+                    args,
+                }
+            }
             kind => panic!("Unknown start of expression: `{}`", kind),
         }
     }

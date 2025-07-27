@@ -16,8 +16,8 @@ pub enum Op {
 }
 
 pub enum Stmt {
-    FnCall { id: String, args: Vec<Expr> },
     Let { id: String, value: Expr },
+    FnCall { id: String, args: Vec<Expr> },
     Assign { id: String, ops: Vec<Unop> },
 }
 
@@ -27,6 +27,7 @@ pub struct Unop {
 }
 
 pub enum Expr {
+    FnCall { id: String, args: Vec<Expr> },
     Lit(Lit),
     ID(String),
 }

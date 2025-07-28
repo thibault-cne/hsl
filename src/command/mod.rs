@@ -26,7 +26,7 @@ impl<'prog> Cmd<'prog> {
             info!("CMD: {}", self.inner.join(" "));
         }
 
-        if self.inner.len() < 1 {
+        if self.inner.is_empty() {
             todo!("error in case the command is incomplete");
         }
 

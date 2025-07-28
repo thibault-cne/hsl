@@ -56,8 +56,8 @@ impl fmt::Display for ErrorKind {
         use ErrorKind::*;
 
         match self {
-            Io(kind) => write!(f, "io error: {}", kind),
-            CmdError(err) => write!(f, "cmd error: {}", err),
+            Io(kind) => write!(f, "io error: {kind}"),
+            CmdError(err) => write!(f, "cmd error: {err}"),
         }
     }
 }

@@ -66,7 +66,7 @@ impl<'prog> Flags<'prog> {
         'arg: loop {
             // In case we have an arg without value
             if ptr == arg.len() {
-                let arg_name = &bytes[(0 + dash_cpt)..ptr];
+                let arg_name = &bytes[dash_cpt..ptr];
                 match arg_name {
                     b"t" | b"target" => self.target_name = Some(get_next_arg(args)),
                     b"o" | b"output" => self.output_path = Some(get_next_arg(args)),
@@ -88,7 +88,7 @@ impl<'prog> Flags<'prog> {
                 }
                 b'=' => {
                     // We reached the end of the arg name
-                    let arg_name = &bytes[(0 + dash_cpt)..ptr];
+                    let arg_name = &bytes[dash_cpt..ptr];
 
                     // # SAFETY: This is safe because indexes are between 0 and `arg.len()` and arg is made of valid UTF-8 char.
                     let arg_value = unsafe { arg.get_unchecked((ptr + 1)..arg.len()) };

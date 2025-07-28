@@ -25,9 +25,8 @@ where
                 let tok = self.next().unwrap();
                 let str = self.text(tok);
                 Lit::Int(
-                    -1 * str
-                        .parse::<i64>()
-                        .unwrap_or_else(|_| panic!("invalid negative integer literal: `{}`", str)),
+                    -str.parse::<i64>()
+                        .unwrap_or_else(|_| panic!("invalid negative integer literal: `{str}`")),
                 )
             }
             T![IntLit] => {
@@ -35,12 +34,12 @@ where
                 let str = self.text(tok);
                 Lit::Int(
                     str.parse()
-                        .unwrap_or_else(|_| panic!("invalid integer literal: `{}`", str)),
+                        .unwrap_or_else(|_| panic!("invalid integer literal: `{str}`")),
                 )
             }
             T![True] => Lit::Bool(true),
             T![False] => Lit::Bool(false),
-            kind => panic!("Unknown start of expression: `{}`", kind),
+            kind => panic!("Unknown start of expression: `{kind}`"),
         }
     }
 }

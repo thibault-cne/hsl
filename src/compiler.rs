@@ -14,7 +14,7 @@ pub struct Compiler<'prog> {
 
 impl<'prog> Compiler<'prog> {
     pub fn new(arena: &'prog Arena<'prog>, default_target: Option<&'prog str>) -> Option<Self> {
-        let flags = Flags::parse(default_target, &arena);
+        let flags = Flags::parse(default_target, arena);
 
         if flags.help {
             eprint!("{}", crate::USAGE);
@@ -33,10 +33,7 @@ impl<'prog> Compiler<'prog> {
         let program_path =
             build_program_path(arena, flags.output_path, flags.source_files[0], target);
 
-        let Some((object_path, output_path)) = build_object_and_output_path(arena, program_path)
-        else {
-            return None;
-        };
+        let (object_path, output_path) = build_object_and_output_path(arena, program_path)?;
 
         Some(Self {
             arena,
@@ -57,7 +54,7 @@ impl<'prog> Compiler<'prog> {
     where
         F: FnMut(&mut Self, &str) -> Result<(), ()>,
     {
-        let source_files = core::mem::replace(&mut self.flags.source_files, vec![]);
+        let source_files = core::mem::take(&mut self.flags.source_files);
         let res = source_files.iter().try_for_each(|f| func(self, f));
         let _ = core::mem::replace(&mut self.flags.source_files, source_files);
         res
@@ -71,7 +68,7 @@ fn build_program_path<'prog>(
     target: crate::target::Target,
 ) -> &'prog str {
     if let Some(program_path) = output_path {
-        if crate::fs::get_file_extension(program_path) == "" {
+        if crate::fs::get_file_extension(program_path).is_empty() {
             arena.strdup(&format!("{program_path}{}", target.file_ext()))
         } else {
             program_path
@@ -89,13 +86,8 @@ fn build_object_and_output_path<'prog>(
 ) -> Option<(&'prog str, &'prog str)> {
     let files = crate::fs::Files::new(program_path);
 
-    let Some(object_path) = files.object_path.to_str() else {
-        return None;
-    };
-
-    let Some(output_path) = files.output_path.to_str() else {
-        return None;
-    };
+    let object_path = files.object_path.to_str()?;
+    let output_path = files.output_path.to_str()?;
 
     Some((arena.strdup(object_path), arena.strdup(output_path)))
 }

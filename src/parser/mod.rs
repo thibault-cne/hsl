@@ -68,10 +68,7 @@ where
     /// or if there is no more tokens to consume.
     pub(crate) fn consume(&mut self, expected: TokenKind) {
         let token = self.next().unwrap_or_else(|| {
-            panic!(
-                "Expected to consume `{}`, but there was no next token.",
-                expected
-            )
+            panic!("Expected to consume `{expected}`, but there was no next token.")
         });
         assert_eq!(
             token.kind, expected,

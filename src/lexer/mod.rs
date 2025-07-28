@@ -130,11 +130,9 @@ impl<'input> Lexer<'input> {
     fn parse_string(&mut self, delim: char) -> Option<()> {
         while let Some(x) = self.peek_char() {
             match x {
-                x if x == '\\' => {
+                '\\' => {
                     self.skip_char();
-                    let Some(x) = self.peek_char() else {
-                        return None;
-                    };
+                    let x = self.peek_char()?;
                     let x = match x {
                         '0' => '\0',
                         'n' => '\n',

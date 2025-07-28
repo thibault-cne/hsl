@@ -1,3 +1,6 @@
+#![allow(unused_macros)]
+#![allow(dead_code)]
+
 use core::fmt;
 
 pub static mut LOGGER: Logger = Logger::new(LogLevel::Info);
@@ -37,7 +40,7 @@ impl Logger {
             return;
         }
 
-        eprintln!("[{level}] {}", args);
+        eprintln!("[{level}] {args}");
     }
 }
 

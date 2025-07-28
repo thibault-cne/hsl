@@ -40,7 +40,7 @@ where
                 self.consume(T![CFnCall]);
                 Expr::FnCall { id, args }
             }
-            kind => panic!("Unknown start of expression: `{}`", kind),
+            kind => panic!("Unknown start of expression: `{kind}`"),
         }
     }
 }

@@ -4,7 +4,7 @@ pub trait Visitor {
     fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable);
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct SymbolLookupTable {
     pub variables: HashMap<String, Variable>,
     pub offset: i32,
@@ -45,18 +45,6 @@ impl SymbolLookupTable {
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
         self.variables.get(name)
-    }
-}
-
-impl Default for SymbolLookupTable {
-    fn default() -> SymbolLookupTable {
-        SymbolLookupTable {
-            variables: HashMap::new(),
-            offset: 0,
-            region: 0,
-            scope: 0,
-            children: Vec::new(),
-        }
     }
 }
 

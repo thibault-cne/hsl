@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use std::fmt;
 
 #[macro_export]
@@ -10,24 +12,13 @@ macro_rules! T {
     [IntLit] => { $crate::lexer::token::TokenKind::IntLit };
     [True] => { $crate::lexer::token::TokenKind::True };
     [False] => { $crate::lexer::token::TokenKind::False };
-    [OParen] => { $crate::lexer::token::TokenKind::OParen };
-    [CParen] => { $crate::lexer::token::TokenKind::CParen };
-    [Dot] => { $crate::lexer::token::TokenKind::Dot };
-    [Dash] => { $crate::lexer::token::TokenKind::Dash };
     [Not] => { $crate::lexer::token::TokenKind::Not };
     [Mul] => { $crate::lexer::token::TokenKind::Mul };
     [Div] => { $crate::lexer::token::TokenKind::Div };
     [Mod] => { $crate::lexer::token::TokenKind::Mod };
     [Plus] => { $crate::lexer::token::TokenKind::Plus };
-    [PlusPlus] => { $crate::lexer::token::TokenKind::PlusPlus };
     [Minus] => { $crate::lexer::token::TokenKind::Minus };
-    [MinusMinus] => { $crate::lexer::token::TokenKind::MinusMinus };
     [Eq] => { $crate::lexer::token::TokenKind::Eq };
-    [Less] => { $crate::lexer::token::TokenKind::Less };
-    [LessEq] => { $crate::lexer::token::TokenKind::LessEq };
-    [Greater] => { $crate::lexer::token::TokenKind::Greater };
-    [GreaterEq] => { $crate::lexer::token::TokenKind::GreaterEq };
-    [Comma] => { $crate::lexer::token::TokenKind::Comma };
     [OAssign] => { $crate::lexer::token::TokenKind::OAssign };
     [Assign] => { $crate::lexer::token::TokenKind::Assign };
     [CAssign] => { $crate::lexer::token::TokenKind::CAssign };
@@ -62,7 +53,7 @@ impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:?} - <{}, {}>",
+            "{} - <{}, {}>",
             self.kind, self.span.start, self.span.end
         )
     }
@@ -89,24 +80,14 @@ pub enum TokenKind {
     False,
 
     // Puncts
-    OParen,
-    CParen,
-    Dot,
-    Dash,
     Not,
     Mul,
     Div,
     Mod,
     Plus,
-    PlusPlus,
     Minus,
-    MinusMinus,
+    #[allow(dead_code)]
     Eq,
-    Less,
-    LessEq,
-    Greater,
-    GreaterEq,
-    Comma,
 
     // Keywords
     OAssign,
@@ -137,24 +118,13 @@ impl fmt::Display for TokenKind {
                 T![IntLit] => "Integer literal",
                 T![True] => "True",
                 T![False] => "False",
-                T![OParen] => "Open parenthesis",
-                T![CParen] => "Close parenthesis",
-                T![Dot] => "Dot",
-                T![Dash] => "Dash",
                 T![Not] => "Not",
                 T![Mul] => "Mul",
                 T![Div] => "Div",
                 T![Mod] => "Mod",
                 T![Plus] => "Plus",
-                T![PlusPlus] => "PlusPlus",
                 T![Minus] => "Minus",
-                T![MinusMinus] => "MinusMinus",
                 T![Eq] => "Eq",
-                T![Less] => "Less",
-                T![LessEq] => "LessEq",
-                T![Greater] => "Greater",
-                T![GreaterEq] => "GreaterEq",
-                T![Comma] => "Comma",
                 T![OAssign] => "Open assign",
                 T![Assign] => "Assign",
                 T![CAssign] => "Close assign",

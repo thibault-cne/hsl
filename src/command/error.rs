@@ -56,16 +56,15 @@ impl fmt::Display for ErrorKind {
         use ErrorKind::*;
 
         match self {
-            Io(kind) => write!(f, "io: {}", kind),
+            Io(kind) => write!(f, "io: {kind}"),
             CmdFailure { cmd, code } => {
                 if let Some(code) = code {
                     write!(
                         f,
-                        "cmd failure: cmd `{}` exited with status code `{}`",
-                        cmd, code
+                        "cmd failure: cmd `{cmd}` exited with status code `{code}`"
                     )
                 } else {
-                    write!(f, "cmd failure: process {} terminated by signal", cmd)
+                    write!(f, "cmd failure: process {cmd} terminated by signal")
                 }
             }
         }

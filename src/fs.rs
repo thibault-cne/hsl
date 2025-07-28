@@ -1,11 +1,10 @@
-pub struct Files<'prog> {
+pub struct Files {
     pub output_path: std::ffi::OsString,
     pub object_path: std::ffi::OsString,
-    pub build_path: &'prog str,
 }
 
-impl<'prog> Files<'prog> {
-    pub fn new(output_file: &'prog str) -> Self {
+impl Files {
+    pub fn new(output_file: &str) -> Self {
         // TODO: handle this error
         let garbage_path = get_garbage_base(output_file).unwrap();
 
@@ -19,14 +18,8 @@ impl<'prog> Files<'prog> {
         Self {
             output_path,
             object_path,
-            build_path: output_file,
         }
     }
-}
-
-pub fn get_base_path(file_path: &str) -> Option<&str> {
-    let path = std::path::Path::new(file_path);
-    path.parent().map(|p| p.to_str()).flatten()
 }
 
 pub fn get_file_extension(file_path: &str) -> &str {
@@ -62,32 +55,24 @@ pub fn create_garbage_base(path: &str) {
 
 pub fn get_file_stem(file_path: &str) -> Option<&str> {
     let path = std::path::Path::new(file_path);
-    path.file_stem().map(|f| f.to_str()).flatten()
+    path.file_stem().and_then(|f| f.to_str())
 }
 
 pub fn get_garbage_base(file_path: &str) -> Option<String> {
     const GARBAGE_PATH_NAME: &str = ".build";
 
     let path = std::path::Path::new(file_path);
-    path.parent()
-        .map(|p| {
-            p.join(GARBAGE_PATH_NAME)
-                .into_os_string()
-                .into_string()
-                .ok()
-        })
-        .flatten()
+    path.parent().and_then(|p| {
+        p.join(GARBAGE_PATH_NAME)
+            .into_os_string()
+            .into_string()
+            .ok()
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_get_base_path() {
-        assert_eq!(get_base_path("foot.txt"), Some(""));
-        assert_eq!(get_base_path("base/foot.txt"), Some("base"));
-    }
 
     #[test]
     fn test_get_file_extension() {

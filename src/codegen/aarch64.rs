@@ -8,7 +8,9 @@ pub struct Codegen<'prog, W> {
     output_path: &'prog str,
     object_path: &'prog str,
     program_path: &'prog str,
+    #[allow(dead_code)]
     quiet: bool,
+    #[allow(dead_code)]
     run: bool,
 
     writer: W,
@@ -114,7 +116,7 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
         Ok(())
     }
 
-    fn run_program(&mut self, cmd: &mut crate::command::Cmd) -> codegen::error::Result<()> {
+    fn run_program(&mut self, _cmd: &mut crate::command::Cmd) -> codegen::error::Result<()> {
         todo!()
     }
 }
@@ -123,7 +125,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     fn generate_fn_decl(
         &mut self,
         func: &'prog Fn,
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
+        _slt: &crate::parser::slt::NavigableSlt<'prog>,
         childs: &mut crate::parser::slt::ChildIterator<'prog>,
     ) -> codegen::error::Result<()> {
         // TODO: handle the stack for function call
@@ -145,14 +147,14 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         &mut self,
         stmt: &'prog Stmt,
         slt: &crate::parser::slt::NavigableSlt<'prog>,
-        childs: &mut crate::parser::slt::ChildIterator<'_>,
+        _childs: &mut crate::parser::slt::ChildIterator<'_>,
     ) -> codegen::error::Result<()> {
         use Stmt::*;
 
         match stmt {
             Let { id, value } => self.generate_let_stmt(id, value, slt),
             FnCall { id, args } => self.generate_fn_call(id, args, slt),
-            Assign { id, ops } => {
+            Assign { .. } => {
                 todo!("implement assign stmt");
             }
         }
@@ -174,7 +176,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         if id == "print" {
             let mut arg_offset = 0;
             for arg in args.iter() {
-                self.generate_expr(&arg, slt)?;
+                self.generate_expr(arg, slt)?;
                 map_err! {
                     // Load the argument onto the stack to allow printf to unstack them and print
                     write!(self.writer, "    // load x8 onto the stack\n");
@@ -185,7 +187,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             }
 
             // Generate the format string
-            self.generate_fmt_str(&args, slt)?;
+            self.generate_fmt_str(args, slt)?;
 
             map_err! {
                 // Call prinf

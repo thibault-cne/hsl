@@ -1,4 +1,4 @@
-pub const PUNCTS: &[(&'static str, super::token::TokenKind)] = &[
+pub const PUNCTS: &[(&str, super::token::TokenKind)] = &[
     ("Never tell me the odds!", T![Mod]),
     ("Not to worry, we are still flying half a ship.", T![Div]),
     ("There's too many of them!", T![Mul]),
@@ -10,7 +10,7 @@ pub const PUNCTS: &[(&'static str, super::token::TokenKind)] = &[
     ("-", T![Not]),
 ];
 
-pub const KEYWORDS: &[(&'static str, super::token::TokenKind)] = &[
+pub const KEYWORDS: &[(&str, super::token::TokenKind)] = &[
     ("Execute order", T![OFnCall]),
     ("Order executed", T![CFnCall]),
     ("A long time ago in a", T![OFnDecl1]),

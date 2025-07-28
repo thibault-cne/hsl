@@ -98,7 +98,7 @@ where
             //        else_stmt,
             //    }
             //}
-            kind => panic!("Unknown start of expression: `{}`", kind),
+            kind => panic!("Unknown start of expression: `{kind}`"),
         }
     }
 
@@ -128,23 +128,27 @@ where
                 op: crate::ir::Op::Mod,
                 value: self.expression(),
             },
-            kind => panic!("Unknown start of unary operator: `{}`", kind),
+            kind => panic!("Unknown start of unary operator: `{kind}`"),
         }
     }
 }
 
 impl<'prog> Visitor for Stmt<'prog> {
     fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
+        #[allow(clippy::single_match)]
         match self {
-            Stmt::Let { id, value } => {
-                if let Expr::Lit { lit, .. } = value {
-                    match lit {
-                        Lit::Str(s) => slt.add_string(id, s.to_string()),
-                        Lit::Int(i) => slt.add_integer(id, *i),
-                        Lit::Bool(b) => slt.add_boolean(id, *b),
-                    }
-                }
-            }
+            Stmt::Let { id, value } => match value {
+                Expr::Lit {
+                    lit: Lit::Str(s), ..
+                } => slt.add_string(id, s.to_string()),
+                Expr::Lit {
+                    lit: Lit::Int(i), ..
+                } => slt.add_integer(id, *i),
+                Expr::Lit {
+                    lit: Lit::Bool(b), ..
+                } => slt.add_boolean(id, *b),
+                _ => (),
+            },
             // ast::Stmt::IfStmt {
             //     body, else_stmt, ..
             // } => {

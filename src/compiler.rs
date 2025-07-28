@@ -52,6 +52,16 @@ impl<'prog> Compiler<'prog> {
     pub fn program_mut(&mut self) -> &mut crate::ir::Program<'prog> {
         &mut self.program
     }
+
+    pub fn try_for_each_source_files<F>(&mut self, mut func: F) -> Result<(), ()>
+    where
+        F: FnMut(&mut Self, &str) -> Result<(), ()>,
+    {
+        let source_files = core::mem::replace(&mut self.flags.source_files, vec![]);
+        let res = source_files.iter().try_for_each(|f| func(self, f));
+        let _ = core::mem::replace(&mut self.flags.source_files, source_files);
+        res
+    }
 }
 
 fn build_program_path<'prog>(

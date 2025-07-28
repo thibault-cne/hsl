@@ -53,16 +53,18 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::FAILURE;
     };
 
-    // We are sure that `flags.source_files` is not empty
-    // TODO: handle multiple files
     info!("compiling files {}", c.flags.source_files.join(", "));
 
-    {
-        let content =
-            std::fs::read_to_string(c.flags.source_files[0]).expect("unable to read file");
+    // TODO: handle file reading error and maybe try to compile all the files and stop the compiler
+    // after
+    let _ = c.try_for_each_source_files(|c, file| {
+        let Ok(content) = std::fs::read_to_string(file) else {
+            return Err(());
+        };
         let mut parser = parser::Parser::new(&content, &arena);
         parser.parse(c.program_mut());
-    }
+        Ok(())
+    });
 
     let mut builder = parser::slt::Builder::new();
     let mut slt = builder.region();

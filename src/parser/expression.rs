@@ -12,7 +12,16 @@ where
         };
 
         match kind {
-            T![String] | T![IntLit] | T![True] | T![False] => Expr::Lit(self.literal()),
+            T![String] | T![IntLit] | T![True] | T![False] => {
+                let id = self
+                    .arena
+                    .strdup(format!("__lit_{}", self.lit_count).as_str());
+                self.lit_count += 1;
+                Expr::Lit {
+                    id,
+                    lit: self.literal(),
+                }
+            }
             T![ID] => {
                 // Consumes the token and retrieve the id in the parser state
                 self.consume(T![ID]);

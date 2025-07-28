@@ -137,7 +137,7 @@ impl<'prog> Visitor for Stmt<'prog> {
     fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
         match self {
             Stmt::Let { id, value } => {
-                if let Expr::Lit(lit) = value {
+                if let Expr::Lit { lit, .. } = value {
                     match lit {
                         Lit::Str(s) => slt.add_string(id, s.to_string()),
                         Lit::Int(i) => slt.add_integer(id, *i),

@@ -45,7 +45,10 @@ pub enum Expr<'prog> {
         id: &'prog str,
         args: Vec<Expr<'prog>>,
     },
-    Lit(Lit<'prog>),
+    Lit {
+        id: &'prog str,
+        lit: Lit<'prog>,
+    },
     ID(&'prog str),
 }
 

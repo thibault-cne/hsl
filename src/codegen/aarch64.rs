@@ -216,7 +216,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         args.iter().enumerate().for_each(|(i, arg)| {
             match arg {
                 FnCall { .. } => todo!("handle fn return type"),
-                Lit(lit) => match lit {
+                Lit { lit, .. } => match lit {
                     Int(_) => sb.push_str("%d"),
                     Str(_) => sb.push_str("%s"),
                     Bool(_) => sb.push_str("%d"),
@@ -271,7 +271,11 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         use Expr::*;
         match expr {
             FnCall { id, args } => self.generate_fn_call(id, args, slt),
-            Lit(lit) => self.generate_lit(lit),
+            Lit { id, lit } => {
+                // We are on a simple literal so we just se the curr_var_id to it's id
+                self.curr_var_id = id;
+                self.generate_lit(lit)
+            }
             ID(id) => {
                 // TODO: handle this unwrap
                 let var = slt.find_variable(id).unwrap();

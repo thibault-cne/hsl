@@ -17,6 +17,7 @@ where
     tokens: std::iter::Peekable<I>,
 
     id: &'input str,
+    lit_count: usize,
     pub has_main: bool,
 }
 
@@ -27,6 +28,7 @@ impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
             input,
             tokens: Lexer::new(input).peekable(),
             id: "",
+            lit_count: 0,
             has_main: false,
         }
     }

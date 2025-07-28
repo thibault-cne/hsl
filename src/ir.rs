@@ -2,13 +2,13 @@
 
 use crate::lexer::token::TokenKind;
 
-pub struct Program {
-    pub func: Vec<Fn>,
+pub struct Program<'prog> {
+    pub func: Vec<Fn<'prog>>,
 }
 
-pub struct Fn {
-    pub id: String,
-    pub stmts: Vec<Stmt>,
+pub struct Fn<'prog> {
+    pub id: &'prog str,
+    pub stmts: Vec<Stmt<'prog>>,
 }
 
 pub enum Op {
@@ -20,27 +20,45 @@ pub enum Op {
     Mod,
 }
 
-pub enum Stmt {
-    Let { id: String, value: Expr },
-    FnCall { id: String, args: Vec<Expr> },
-    Assign { id: String, ops: Vec<Unop> },
+pub enum Stmt<'prog> {
+    Let {
+        id: &'prog str,
+        value: Expr<'prog>,
+    },
+    FnCall {
+        id: &'prog str,
+        args: Vec<Expr<'prog>>,
+    },
+    Assign {
+        id: &'prog str,
+        ops: Vec<Unop<'prog>>,
+    },
 }
 
-pub struct Unop {
-    pub value: Expr,
+pub struct Unop<'prog> {
+    pub value: Expr<'prog>,
     pub op: Op,
 }
 
-pub enum Expr {
-    FnCall { id: String, args: Vec<Expr> },
-    Lit(Lit),
-    ID(String),
+pub enum Expr<'prog> {
+    FnCall {
+        id: &'prog str,
+        args: Vec<Expr<'prog>>,
+    },
+    Lit(Lit<'prog>),
+    ID(&'prog str),
 }
 
-pub enum Lit {
+pub enum Lit<'prog> {
     Int(i64),
-    Str(String),
+    Str(&'prog str),
     Bool(bool),
+}
+
+impl<'prog> Program<'prog> {
+    pub fn new() -> Self {
+        Self { func: Vec::new() }
+    }
 }
 
 impl TryFrom<TokenKind> for Op {

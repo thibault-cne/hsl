@@ -6,8 +6,8 @@ use crate::ir::{self, Expr, Fn, Lit, Stmt};
 pub struct Codegen<'prog, W> {
     // Inputs
     output_path: &'prog str,
-    o_path: &'prog str,
-    b_path: &'prog str,
+    object_path: &'prog str,
+    program_path: &'prog str,
     quiet: bool,
     run: bool,
 
@@ -21,20 +21,13 @@ pub struct Codegen<'prog, W> {
 }
 
 impl<'prog, W: io::Write> Codegen<'prog, W> {
-    pub fn new(
-        output_path: &'prog str,
-        o_path: &'prog str,
-        b_path: &'prog str,
-        quiet: bool,
-        run: bool,
-        writer: W,
-    ) -> Self {
+    pub fn new(c: &'prog crate::compiler::Compiler, writer: W) -> Self {
         Self {
-            output_path,
-            o_path,
-            b_path,
-            quiet,
-            run,
+            output_path: c.output_path,
+            object_path: c.object_path,
+            program_path: c.program_path,
+            quiet: c.flags.quiet,
+            run: c.flags.run,
 
             writer,
 
@@ -101,11 +94,19 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
         }
 
         info!("generated {}", self.output_path);
-        cmd_append!(cmd, "as", "-o", self.o_path, self.output_path);
+        cmd_append!(cmd, "as", "-o", self.object_path, self.output_path);
         if let Err(e) = cmd.run_and_reset() {
             return Err(new_error!(from e));
         }
-        cmd_append!(cmd, "cc", "-arch", "arm64", "-o", self.b_path, self.o_path);
+        cmd_append!(
+            cmd,
+            "cc",
+            "-arch",
+            "arm64",
+            "-o",
+            self.program_path,
+            self.object_path
+        );
         if let Err(e) = cmd.run_and_reset() {
             return Err(new_error!(from e));
         }

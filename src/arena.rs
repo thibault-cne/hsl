@@ -1,10 +1,12 @@
 const ARENA_REGION_DEFAULT_CAP: usize = 8 * 1024;
 
-pub struct Arena {
+pub struct Arena<'prog> {
     begin: *mut Region,
     end: *mut Region,
 
     count: usize,
+
+    _lifetime: core::marker::PhantomData<&'prog str>,
 }
 
 // TODO: make it so we can store `Drop` items
@@ -19,17 +21,18 @@ struct Region {
     data: *mut u8,
 }
 
-impl Arena {
+impl<'prog> Arena<'prog> {
     pub fn new() -> Self {
         Self {
             begin: core::ptr::null_mut(),
             end: core::ptr::null_mut(),
 
             count: 0,
+            _lifetime: core::marker::PhantomData,
         }
     }
 
-    pub fn strdup(&self, str: &str) -> &str {
+    pub fn strdup(&self, str: &str) -> &'prog str {
         unsafe {
             let chunk = self.arena_alloc(str.len());
             core::ptr::copy_nonoverlapping(str.as_ptr(), chunk, str.len());
@@ -77,7 +80,7 @@ impl Arena {
     }
 }
 
-impl Drop for Arena {
+impl<'prog> Drop for Arena<'prog> {
     fn drop(&mut self) {
         unsafe {
             while !(*self.end).next.is_null() {
@@ -127,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_strdup() {
-        let mut arena = Arena::new();
+        let arena = Arena::new();
         let str_1 = arena.strdup("Hello World!");
         let str_2 = arena.strdup("Hello World!");
 

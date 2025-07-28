@@ -49,60 +49,38 @@ fn main() -> std::process::ExitCode {
         None
     };
 
-    let Some(c) = compiler::Compiler::new(&arena, default_target.map(|d| d.name())) else {
+    let Some(mut c) = compiler::Compiler::new(&arena, default_target.map(|d| d.name())) else {
         return std::process::ExitCode::FAILURE;
-    };
-
-    let program_path = if let Some(program_path) = c.flags.output_path {
-        program_path
-    } else {
-        // SAFETY: this is safe because `flags.source_files` is not empty
-        fs::strip_extension(c.flags.source_files[0])
     };
 
     // We are sure that `flags.source_files` is not empty
     // TODO: handle multiple files
     info!("compiling files {}", c.flags.source_files.join(", "));
-    let content = std::fs::read_to_string(c.flags.source_files[0]).expect("unable to read file");
 
-    let mut parser = parser::Parser::new(&content);
-    let program = parser.parse();
+    {
+        let content =
+            std::fs::read_to_string(c.flags.source_files[0]).expect("unable to read file");
+        let mut parser = parser::Parser::new(&content, &arena);
+        parser.parse(c.program_mut());
+    }
 
     let mut builder = parser::slt::Builder::new();
     let mut slt = builder.region();
 
-    program.visit(&mut builder, &mut slt);
+    c.program.visit(&mut builder, &mut slt);
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
     let mut cmd = command::Cmd::new(c.flags.quiet);
-    let files = fs::Files::new(program_path);
-
-    let Some(output_path) = files.output_path.to_str() else {
-        error!("couldn't format output path");
-        return std::process::ExitCode::FAILURE;
-    };
-
-    let Some(object_path) = files.object_path.to_str() else {
-        error!("couldn't format object path");
-        return std::process::ExitCode::FAILURE;
-    };
 
     let program_slt = nav_slt.childs().next().unwrap();
     let mut program_slt_childs = program_slt.childs();
 
-    let mut codegen = codegen::build_codegen(
-        c.target,
-        &output_path,
-        &object_path,
-        files.build_path,
-        c.flags.quiet,
-        c.flags.run,
-    );
+    let mut codegen = codegen::build_codegen(&c);
 
     // Generate the program
     // TODO: handle error
     if codegen
-        .generate_program(&program, &program_slt, &mut program_slt_childs, &mut cmd)
+        .generate_program(&c.program, &program_slt, &mut program_slt_childs, &mut cmd)
         .is_err()
     {
         return std::process::ExitCode::FAILURE;

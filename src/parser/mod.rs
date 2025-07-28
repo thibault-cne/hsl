@@ -8,20 +8,22 @@ pub mod program;
 pub mod slt;
 pub mod statement;
 
-pub struct Parser<'prog, I>
+pub struct Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    input: &'prog str,
+    arena: &'prog crate::arena::Arena<'prog>,
+    input: &'input str,
     tokens: std::iter::Peekable<I>,
 
-    id: &'prog str,
+    id: &'input str,
     pub has_main: bool,
 }
 
-impl<'prog> Parser<'prog, Lexer<'prog>> {
-    pub fn new(input: &'prog str) -> Self {
+impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
+    pub fn new(input: &'input str, arena: &'prog crate::arena::Arena<'prog>) -> Self {
         Parser {
+            arena,
             input,
             tokens: Lexer::new(input).peekable(),
             id: "",
@@ -30,12 +32,12 @@ impl<'prog> Parser<'prog, Lexer<'prog>> {
     }
 }
 
-impl<'prog, I> Parser<'prog, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
     /// Get the source text of a token::Token
-    pub fn text(&self, token: Token) -> &'prog str {
+    pub fn text(&self, token: Token) -> &'input str {
         token.text(self.input)
     }
 
@@ -81,17 +83,14 @@ where
         }
     }
 
-    pub(crate) fn parse(&mut self) -> Program {
-        let mut func = Vec::new();
+    pub(crate) fn parse(&mut self, program: &mut Program<'prog>) {
         while !self.check_next(T![EOF]) {
-            func.push(self.parse_function());
+            program.func.push(self.parse_function());
         }
         self.consume(T![EOF]);
-
-        Program { func }
     }
 
-    fn parse_function(&mut self) -> Fn {
+    fn parse_function(&mut self) -> Fn<'prog> {
         self.consume(T![OFnDecl1]);
         self.consume(T![ID]);
 
@@ -99,7 +98,7 @@ where
             self.has_main = true;
         }
 
-        let id = self.id.to_string();
+        let id = self.arena.strdup(self.id);
 
         self.consume(T![OFnDecl2]);
 

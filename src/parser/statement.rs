@@ -4,11 +4,11 @@ use crate::parser::Parser;
 
 use super::slt::{Builder, SymbolLookupTable, Visitor};
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn statement(&mut self) -> Stmt {
+    pub fn statement(&mut self) -> Stmt<'prog> {
         let Some(kind) = self.peek() else {
             panic!("Expected a statement and found nothing");
         };
@@ -23,7 +23,7 @@ where
                     "Expected identifier after `let`, but found `{}`",
                     ident.kind
                 );
-                let id = self.text(ident).to_string();
+                let id = self.arena.strdup(self.text(ident));
                 self.consume(T![Assign]);
                 let value = self.expression();
                 Stmt::Let { id, value }
@@ -39,6 +39,7 @@ where
                     "Expected identifier after `fn call`, but found `{}`",
                     ident.kind
                 );
+                let id = self.arena.strdup(self.text(ident));
 
                 let mut args = Vec::new();
                 while !self.check_next(T![CFnCall]) {
@@ -46,10 +47,7 @@ where
                 }
 
                 self.consume(T![CFnCall]);
-                Stmt::FnCall {
-                    id: self.text(ident).to_string(),
-                    args,
-                }
+                Stmt::FnCall { id, args }
             }
             T![OAssign] => {
                 self.consume(T![OAssign]);
@@ -60,7 +58,7 @@ where
                     "Expected identifier after `assign`, but found `{}`",
                     ident.kind
                 );
-                let id = self.text(ident).to_string();
+                let id = self.arena.strdup(self.text(ident));
 
                 let mut ops = Vec::new();
                 while !self.check_next(T![CAssign]) {
@@ -104,7 +102,7 @@ where
         }
     }
 
-    fn unary_op(&mut self) -> Unop {
+    fn unary_op(&mut self) -> Unop<'prog> {
         let Some(kind) = self.peek() else {
             panic!("Expected an unary operator and found nothing");
         };
@@ -135,7 +133,7 @@ where
     }
 }
 
-impl Visitor for Stmt {
+impl<'prog> Visitor for Stmt<'prog> {
     fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
         match self {
             Stmt::Let { id, value } => {

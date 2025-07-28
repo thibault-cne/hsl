@@ -1,7 +1,7 @@
 use crate::ir::{Fn, Program};
 use crate::parser::slt::{Builder, SymbolLookupTable, Visitor};
 
-impl Visitor for Program {
+impl<'prog> Visitor for Program<'prog> {
     fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
         let Self { func } = self;
 
@@ -11,7 +11,7 @@ impl Visitor for Program {
     }
 }
 
-impl Visitor for Fn {
+impl<'prog> Visitor for Fn<'prog> {
     fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
         // TODO: add function declaration to the slt
         let Self { stmts, .. } = self;

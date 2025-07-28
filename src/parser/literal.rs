@@ -3,11 +3,11 @@ use crate::lexer::token::Token;
 
 use super::Parser;
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn literal(&mut self) -> Lit {
+    pub fn literal(&mut self) -> Lit<'prog> {
         let Some(kind) = self.peek() else {
             panic!("expected a literal but got nothing");
         };
@@ -16,7 +16,8 @@ where
             T![String] => {
                 let tok = self.next().unwrap();
                 let str = self.text(tok);
-                Lit::Str(str[1..(str.len() - 1)].to_string())
+                let str = &str[1..(str.len() - 1)];
+                Lit::Str(self.arena.strdup(str))
             }
             T![Not] => {
                 self.consume(T![Not]);

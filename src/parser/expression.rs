@@ -2,11 +2,11 @@ use crate::ir::Expr;
 use crate::lexer::token::Token;
 use crate::parser::Parser;
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn expression(&mut self) -> Expr {
+    pub fn expression(&mut self) -> Expr<'prog> {
         let Some(kind) = self.peek() else {
             panic!("Expected an expression and found nothing");
         };
@@ -16,12 +16,12 @@ where
             T![ID] => {
                 // Consumes the token and retrieve the id in the parser state
                 self.consume(T![ID]);
-                Expr::ID(self.id.to_string())
+                Expr::ID(self.arena.strdup(self.id))
             }
             T![OFnCall] => {
                 self.consume(T![OFnCall]);
                 self.consume(T![ID]);
-                let id = self.id.to_string();
+                let id = self.arena.strdup(self.id);
 
                 let mut args = Vec::new();
                 while !self.check_next(T![CFnCall]) {

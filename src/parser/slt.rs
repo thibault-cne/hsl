@@ -124,9 +124,8 @@ pub struct NavigableSlt<'a> {
 impl<'a> NavigableSlt<'a> {
     pub fn childs(&'a self) -> ChildIterator<'a> {
         ChildIterator {
-            position: 0,
             parent: self,
-            childs: &self.slt.children,
+            childs: self.slt.children.iter(),
         }
     }
 
@@ -135,6 +134,14 @@ impl<'a> NavigableSlt<'a> {
             Some(var) => Some(var),
             None => self.parent.and_then(|p| p.find_variable(name)),
         }
+    }
+}
+
+impl<'a> core::ops::Deref for NavigableSlt<'a> {
+    type Target = SymbolLookupTable;
+
+    fn deref(&self) -> &Self::Target {
+        self.slt
     }
 }
 
@@ -148,17 +155,15 @@ impl<'a> From<&'a SymbolLookupTable> for NavigableSlt<'a> {
 }
 
 pub struct ChildIterator<'a> {
-    position: usize,
     parent: &'a NavigableSlt<'a>,
-    childs: &'a [SymbolLookupTable],
+    childs: std::slice::Iter<'a, SymbolLookupTable>,
 }
 
 impl<'a> Iterator for ChildIterator<'a> {
     type Item = NavigableSlt<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.position += 1;
-        self.childs.get(self.position - 1).map(|c| NavigableSlt {
+        self.childs.next().map(|c| NavigableSlt {
             slt: c,
             parent: Some(self.parent),
         })

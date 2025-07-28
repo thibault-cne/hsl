@@ -12,7 +12,9 @@ mod lexer;
 #[macro_use]
 mod command;
 
+mod arena;
 mod codegen;
+mod compiler;
 mod flags;
 mod fs;
 mod ir;
@@ -20,7 +22,7 @@ mod math;
 mod parser;
 mod target;
 
-use codegen::Compiler;
+use codegen::Codegen;
 use parser::slt::Visitor;
 
 /// The help string.
@@ -38,40 +40,30 @@ COMPILATION OPTIONS
 ";
 
 fn main() -> std::process::ExitCode {
+    // Create the arena allocator to store all compiler variables
+    let arena = arena::Arena::new();
+
     let default_target = if cfg!(target_arch = "aarch64") && cfg!(target_os = "macos") {
         Some(target::Target::AArch64Darwin)
     } else {
         None
     };
 
-    // Parse flags passed to the compiler
-    let flags = flags::Flags::parse(default_target.map(|d| d.name()));
-
-    if flags.help {
-        eprint!("{}", USAGE);
-        return std::process::ExitCode::SUCCESS;
-    }
-
-    if flags.source_files.is_empty() {
-        todo!()
-    }
-
-    let Some(target) = flags.target_name.and_then(target::Target::by_name) else {
-        eprint!("{}", USAGE);
+    let Some(c) = compiler::Compiler::new(&arena, default_target.map(|d| d.name())) else {
         return std::process::ExitCode::FAILURE;
     };
 
-    let program_path = if let Some(program_path) = flags.output_path {
+    let program_path = if let Some(program_path) = c.flags.output_path {
         program_path
     } else {
         // SAFETY: this is safe because `flags.source_files` is not empty
-        fs::strip_extension(flags.source_files[0])
+        fs::strip_extension(c.flags.source_files[0])
     };
 
     // We are sure that `flags.source_files` is not empty
     // TODO: handle multiple files
-    info!("compiling files {}", flags.source_files.join(", "));
-    let content = std::fs::read_to_string(flags.source_files[0]).expect("unable to read file");
+    info!("compiling files {}", c.flags.source_files.join(", "));
+    let content = std::fs::read_to_string(c.flags.source_files[0]).expect("unable to read file");
 
     let mut parser = parser::Parser::new(&content);
     let program = parser.parse();
@@ -82,7 +74,7 @@ fn main() -> std::process::ExitCode {
     program.visit(&mut builder, &mut slt);
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
-    let mut cmd = command::Cmd::new(flags.quiet);
+    let mut cmd = command::Cmd::new(c.flags.quiet);
     let files = fs::Files::new(program_path);
 
     let Some(output_path) = files.output_path.to_str() else {
@@ -95,19 +87,22 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::FAILURE;
     };
 
-    let mut compiler = codegen::build_compiler(
-        target,
+    let program_slt = nav_slt.childs().next().unwrap();
+    let mut program_slt_childs = program_slt.childs();
+
+    let mut codegen = codegen::build_codegen(
+        c.target,
         &output_path,
         &object_path,
         files.build_path,
-        flags.quiet,
-        flags.run,
+        c.flags.quiet,
+        c.flags.run,
     );
 
     // Generate the program
     // TODO: handle error
-    if compiler
-        .generate_program(&program, &nav_slt, &mut cmd)
+    if codegen
+        .generate_program(&program, &program_slt, &mut program_slt_childs, &mut cmd)
         .is_err()
     {
         return std::process::ExitCode::FAILURE;
@@ -115,7 +110,7 @@ fn main() -> std::process::ExitCode {
 
     // If run option unabled than run the program
     // TODO: handle error
-    if flags.run && compiler.run_program(&mut cmd).is_err() {
+    if c.flags.run && codegen.run_program(&mut cmd).is_err() {
         return std::process::ExitCode::FAILURE;
     }
 

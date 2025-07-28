@@ -13,8 +13,9 @@ pub const PUNCTS: &[(&'static str, super::token::TokenKind)] = &[
 pub const KEYWORDS: &[(&'static str, super::token::TokenKind)] = &[
     ("Execute order", T![OFnCall]),
     ("Order executed", T![CFnCall]),
-    ("A long time ago in a galaxy far, far away...", T![OProgram]),
-    ("May the force be with you.", T![CProgram]),
+    ("A long time ago in a", T![OFnDecl1]),
+    ("far, far away...", T![OFnDecl2]),
+    ("May the force be with you.", T![CFnDecl]),
     ("Do, or do not. There is no try.", T![If]),
     ("These aren't the droids you're looking for.", T![Else]),
     ("You have failed me for the last time.", T![IfEnd]),

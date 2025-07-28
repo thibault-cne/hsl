@@ -3,6 +3,11 @@
 use crate::lexer::token::TokenKind;
 
 pub struct Program {
+    pub func: Vec<Fn>,
+}
+
+pub struct Fn {
+    pub id: String,
     pub stmts: Vec<Stmt>,
 }
 

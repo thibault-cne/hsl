@@ -468,16 +468,17 @@ mod tests {
         let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
         let tokens: Vec<_> = lexer.tokenize();
-        println!("{:?}", tokens);
         assert_tokens!(
             tokens,
             [
-                T![OProgram],
+                T![OFnDecl1],
+                T![ID],
+                T![OFnDecl2],
                 T![Let],
                 T![ID],
                 T![Assign],
                 T![IntLit],
-                T![CProgram],
+                T![CFnDecl],
                 T![EOF]
             ]
         );
@@ -501,7 +502,9 @@ mod tests {
         assert_tokens!(
             tokens,
             [
-                T![OProgram],
+                T![OFnDecl1],
+                T![ID],
+                T![OFnDecl2],
                 T![Let],
                 T![ID],
                 T![Assign],
@@ -510,7 +513,7 @@ mod tests {
                 T![ID],
                 T![ID],
                 T![CFnCall],
-                T![CProgram],
+                T![CFnDecl],
                 T![EOF]
             ]
         );
@@ -534,7 +537,9 @@ mod tests {
         assert_tokens!(
             tokens,
             [
-                T![OProgram],
+                T![OFnDecl1],
+                T![ID],
+                T![OFnDecl2],
                 T![Let],
                 T![ID],
                 T![Assign],
@@ -543,7 +548,7 @@ mod tests {
                 T![ID],
                 T![ID],
                 T![CFnCall],
-                T![CProgram],
+                T![CFnDecl],
                 T![EOF]
             ]
         );

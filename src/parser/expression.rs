@@ -14,24 +14,14 @@ where
         match kind {
             T![String] | T![IntLit] | T![True] | T![False] => Expr::Lit(self.literal()),
             T![ID] => {
-                let name = {
-                    let ident_token = self.next().unwrap();
-                    self.text(ident_token)
-                };
-
-                Expr::ID(name.to_string())
+                // Consumes the token and retrieve the id in the parser state
+                self.consume(T![ID]);
+                Expr::ID(self.id.to_string())
             }
             T![OFnCall] => {
                 self.consume(T![OFnCall]);
-                let ident = self
-                    .next()
-                    .expect("Expected function identifier in fn call");
-                assert_eq!(
-                    ident.kind,
-                    T![ID],
-                    "Expected identifier after `fn call`, but found `{}`",
-                    ident.kind
-                );
+                self.consume(T![ID]);
+                let id = self.id.to_string();
 
                 let mut args = Vec::new();
                 while !self.check_next(T![CFnCall]) {
@@ -39,10 +29,7 @@ where
                 }
 
                 self.consume(T![CFnCall]);
-                Expr::FnCall {
-                    id: self.text(ident).to_string(),
-                    args,
-                }
+                Expr::FnCall { id, args }
             }
             kind => panic!("Unknown start of expression: `{}`", kind),
         }

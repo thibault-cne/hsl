@@ -1,4 +1,4 @@
-use crate::ir::Program;
+use crate::ir::{Fn, Program};
 use crate::lexer::token::{Token, TokenKind};
 use crate::lexer::Lexer;
 
@@ -8,29 +8,34 @@ pub mod program;
 pub mod slt;
 pub mod statement;
 
-pub struct Parser<'input, I>
+pub struct Parser<'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    input: &'input str,
+    input: &'prog str,
     tokens: std::iter::Peekable<I>,
+
+    id: &'prog str,
+    pub has_main: bool,
 }
 
-impl<'input> Parser<'input, Lexer<'input>> {
-    pub fn new(input: &'input str) -> Self {
+impl<'prog> Parser<'prog, Lexer<'prog>> {
+    pub fn new(input: &'prog str) -> Self {
         Parser {
             input,
             tokens: Lexer::new(input).peekable(),
+            id: "",
+            has_main: false,
         }
     }
 }
 
-impl<'input, I> Parser<'input, I>
+impl<'prog, I> Parser<'prog, I>
 where
     I: Iterator<Item = Token>,
 {
     /// Get the source text of a token::Token
-    pub fn text(&self, token: Token) -> &'input str {
+    pub fn text(&self, token: Token) -> &'prog str {
         token.text(self.input)
     }
 
@@ -69,20 +74,42 @@ where
             "Expected to consume `{}`, but found `{}` instead",
             expected, token.kind
         );
+
+        if matches!(token.kind, T![ID]) {
+            // In this case we update the id state of the parser
+            self.id = self.text(token);
+        }
     }
 
     pub(crate) fn parse(&mut self) -> Program {
-        // TODO: parse functions declaration before
-        self.consume(T![OProgram]);
+        let mut func = Vec::new();
+        while !self.check_next(T![EOF]) {
+            func.push(self.parse_function());
+        }
+        self.consume(T![EOF]);
+
+        Program { func }
+    }
+
+    fn parse_function(&mut self) -> Fn {
+        self.consume(T![OFnDecl1]);
+        self.consume(T![ID]);
+
+        if self.id == "galaxy" {
+            self.has_main = true;
+        }
+
+        let id = self.id.to_string();
+
+        self.consume(T![OFnDecl2]);
 
         let mut stmts = Vec::new();
-        while !self.check_next(T![CProgram]) {
+        while !self.check_next(T![CFnDecl]) {
             stmts.push(self.statement());
         }
 
-        self.consume(T![CProgram]);
-        self.consume(T![EOF]);
+        self.consume(T![CFnDecl]);
 
-        Program { stmts }
+        Fn { id, stmts }
     }
 }

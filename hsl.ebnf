@@ -1,4 +1,6 @@
-program = OPROGRAM statements CPROGRAM;
+program = { decl-fn };
+
+decl-fn = OFNDECL-FIRST WS? id WS? OFNDECL-SECOND statements CDECLFN;
 
 statements = { statement };
 
@@ -77,8 +79,10 @@ ASSIGN =  "I am your father."
 LET =  "I am a big deal in the resistance."
 	| "The force is strong with this one."
 	| "That's one hell of a pilot.";
-OPROGRAM = "A long time ago in a galaxy far, far away...";
-CPROGRAM = "May the force be with you.";
+
+OFNDECL-FIRST = "A long time ago in a";
+OFNDECL-SECOND = far, far away...";
+CFNDECL = "May the force be with you.";
 
 WS = " ";
 NEWLINE = CR? LF;

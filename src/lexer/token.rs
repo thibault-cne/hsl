@@ -35,8 +35,9 @@ macro_rules! T {
     [IfEnd] => { $crate::lexer::token::TokenKind::IfEnd};
     [Else] => { $crate::lexer::token::TokenKind::Else };
     [Let] => { $crate::lexer::token::TokenKind::Let };
-    [OProgram] => { $crate::lexer::token::TokenKind::OProgram };
-    [CProgram] => { $crate::lexer::token::TokenKind::CProgram };
+    [OFnDecl1] => { $crate::lexer::token::TokenKind::OFnDecl1 };
+    [OFnDecl2] => { $crate::lexer::token::TokenKind::OFnDecl2 };
+    [CFnDecl] => { $crate::lexer::token::TokenKind::CFnDecl };
     [OFnCall] => { $crate::lexer::token::TokenKind::OFnCall };
     [CFnCall] => { $crate::lexer::token::TokenKind::CFnCall };
 }
@@ -115,8 +116,9 @@ pub enum TokenKind {
     IfEnd,
     Else,
     Let,
-    OProgram,
-    CProgram,
+    OFnDecl1,
+    OFnDecl2,
+    CFnDecl,
     OFnCall,
     CFnCall,
 }
@@ -160,8 +162,9 @@ impl fmt::Display for TokenKind {
                 T![IfEnd] => "IfEnd",
                 T![Else] => "Else",
                 T![Let] => "Let",
-                T![OProgram] => "Opening program",
-                T![CProgram] => "Closing program",
+                T![OFnDecl1] => "Opening function declaration 1",
+                T![OFnDecl2] => "Opening function declaration 2",
+                T![CFnDecl] => "Closing function declaration 1",
                 T![OFnCall] => "Opening function call",
                 T![CFnCall] => "Closing function call",
             }

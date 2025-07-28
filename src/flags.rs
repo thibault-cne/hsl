@@ -1,15 +1,17 @@
-pub struct Flags {
-    pub source_files: Vec<&'static str>,
-    pub target_name: Option<&'static str>,
-    pub output_path: Option<&'static str>,
+use crate::arena::Arena;
+
+pub struct Flags<'prog> {
+    pub source_files: Vec<&'prog str>,
+    pub target_name: Option<&'prog str>,
+    pub output_path: Option<&'prog str>,
 
     pub run: bool,
     pub help: bool,
     pub quiet: bool,
 }
 
-impl Flags {
-    pub fn parse(default_target: Option<&'static str>) -> Self {
+impl<'prog> Flags<'prog> {
+    pub fn parse(default_target: Option<&'prog str>, arena: &'prog Arena) -> Self {
         let mut flags = Flags {
             source_files: Vec::new(),
             target_name: default_target,
@@ -36,7 +38,7 @@ impl Flags {
                 if !arg.ends_with(".hs") {
                     todo!()
                 } else {
-                    flags.source_files.push(arg.leak());
+                    flags.source_files.push(arena.strdup(arg.as_str()));
                 }
                 break 'args;
             }
@@ -48,7 +50,7 @@ impl Flags {
             if !a.ends_with(".hs") {
                 todo!()
             } else {
-                flags.source_files.push(a.leak());
+                flags.source_files.push(arena.strdup(a.as_str()));
             }
         });
 

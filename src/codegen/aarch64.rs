@@ -1,9 +1,9 @@
 use std::io;
 
 use crate::codegen;
-use crate::ir::{self, Expr, Lit, Stmt};
+use crate::ir::{self, Expr, Fn, Lit, Stmt};
 
-pub struct Compiler<'prog, W> {
+pub struct Codegen<'prog, W> {
     // Inputs
     output_path: &'prog str,
     o_path: &'prog str,
@@ -20,7 +20,7 @@ pub struct Compiler<'prog, W> {
     has_stack_room: bool,
 }
 
-impl<'prog, W: io::Write> Compiler<'prog, W> {
+impl<'prog, W: io::Write> Codegen<'prog, W> {
     pub fn new(
         output_path: &'prog str,
         o_path: &'prog str,
@@ -46,11 +46,12 @@ impl<'prog, W: io::Write> Compiler<'prog, W> {
     }
 }
 
-impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
+impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
     fn generate_program(
         &mut self,
         program: &'prog crate::ir::Program,
         slt: &'prog crate::parser::slt::NavigableSlt<'prog>,
+        childs: &mut crate::parser::slt::ChildIterator<'prog>,
         cmd: &mut crate::command::Cmd<'prog>,
     ) -> codegen::error::Result<()> {
         map_err! {
@@ -60,15 +61,12 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
             write!(self.writer, "    mov x29, sp\n");
             write!(self.writer, "\n");
             write!(self.writer, "    // jump to the main function\n");
-            write!(self.writer, "    b _program\n");
+            write!(self.writer, "    b _galaxy\n");
             write!(self.writer, "_end:\n");
         };
 
-        // TODO: check this unwrap
-        let child = slt.childs().next().unwrap();
-        let mut program_childs = child.childs();
         // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
-        let var_size = child.slt.variables.len() * 8;
+        let var_size = slt.variables.len() * 8;
         let stack_size = crate::math::smallest_multiple_greater_than(16, var_size as _);
 
         map_err! {
@@ -79,11 +77,10 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
             write!(self.writer, "    mov x16, #1\n");
             write!(self.writer, "    svc 0\n");
             write!(self.writer, "\n");
-            write!(self.writer, "_program:\n");
         }
 
-        for stmt in program.stmts.iter() {
-            self.generate_stmt(stmt, &slt.childs().next().unwrap(), &mut program_childs)?;
+        for func in program.func.iter() {
+            self.generate_fn_decl(func, slt, childs)?;
         }
 
         map_err! {
@@ -121,7 +118,28 @@ impl<'prog, W: io::Write> codegen::Compiler<'prog> for Compiler<'prog, W> {
     }
 }
 
-impl<'prog, W: io::Write> Compiler<'prog, W> {
+impl<'prog, W: io::Write> Codegen<'prog, W> {
+    fn generate_fn_decl(
+        &mut self,
+        func: &'prog Fn,
+        slt: &crate::parser::slt::NavigableSlt<'prog>,
+        childs: &mut crate::parser::slt::ChildIterator<'prog>,
+    ) -> codegen::error::Result<()> {
+        // TODO: handle the stack for function call
+        map_err! {
+            write!(self.writer, "_{}:\n", func.id);
+        }
+
+        let child = childs.next().unwrap();
+        let mut fn_childs = child.childs();
+
+        for stmt in func.stmts.iter() {
+            self.generate_stmt(stmt, &child, &mut fn_childs)?;
+        }
+
+        Ok(())
+    }
+
     fn generate_stmt(
         &mut self,
         stmt: &'prog Stmt,

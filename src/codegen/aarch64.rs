@@ -4,6 +4,8 @@ use crate::codegen;
 use crate::ir::{self, Expr, Fn, Lit, Stmt};
 
 pub struct Codegen<'prog, W> {
+    arena: &'prog crate::arena::Arena<'prog>,
+
     // Inputs
     output_path: &'prog str,
     object_path: &'prog str,
@@ -17,7 +19,7 @@ pub struct Codegen<'prog, W> {
 
     // State of the compiler
     string_literals: Vec<(&'prog str, &'prog str)>,
-    curr_var_id: &'prog str,
+    curr_var_id: Option<&'prog str>,
     fmt_str_cpt: usize,
     has_stack_room: bool,
 }
@@ -25,6 +27,7 @@ pub struct Codegen<'prog, W> {
 impl<'prog, W: io::Write> Codegen<'prog, W> {
     pub fn new(c: &'prog crate::compiler::Compiler, writer: W) -> Self {
         Self {
+            arena: c.arena,
             output_path: c.output_path,
             object_path: c.object_path,
             program_path: c.program_path,
@@ -34,7 +37,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             writer,
 
             string_literals: Vec::new(),
-            curr_var_id: "",
+            curr_var_id: None,
             fmt_str_cpt: 0,
             has_stack_room: false,
         }
@@ -243,15 +246,36 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             }
         });
 
-        let format_name = format!("__fmt_str_{}", self.fmt_str_cpt);
+        // Check if the format string of the same format has already been created to
+        // avoid reallocating and identical one
+        let name = if let Some(name) = self
+            .string_literals
+            .iter()
+            .find(|(_, value)| value == &sb.as_str())
+            .map(|(value, _)| *value)
+        {
+            name
+        } else {
+            // In this case we created a new string format so increment the fmt_str_cpt
+            self.fmt_str_cpt += 1;
 
+            // We allocate the name and the value in the arena
+            let name = self
+                .arena
+                .strdup(format!("__fmt_str_{}", self.fmt_str_cpt).as_str());
+            let value = self.arena.strdup(sb.as_str());
+
+            self.string_literals.push((name, value));
+
+            name
+        };
+
+        // Load the format string to x0
         map_err! {
-            write!(self.writer, "    adrp x0, {}@PAGE\n", format_name);
-            write!(self.writer, "    add x0, x0, {}@PAGEOFF\n", format_name);
+            write!(self.writer, "    adrp x0, {}@PAGE\n", name);
+            write!(self.writer, "    add x0, x0, {}@PAGEOFF\n", name);
         }
 
-        self.string_literals.push((format_name.leak(), sb.leak()));
-        self.fmt_str_cpt += 1;
         Ok(())
     }
 
@@ -261,8 +285,29 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         value: &'prog Expr,
         slt: &crate::parser::slt::NavigableSlt<'prog>,
     ) -> codegen::error::Result<()> {
-        self.curr_var_id = id;
-        self.generate_expr(value, slt)
+        self.curr_var_id = Some(id);
+        // Value is loaded inside the x8 register we need to store it on the stack
+        self.generate_expr(value, slt)?;
+
+        if !self.has_stack_room {
+            self.has_stack_room = true;
+            map_err! {
+                // Allocate two spaces and ensures that the stack is 16 aligned
+                write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
+                write!(self.writer, "    add sp, sp, -0x10\n");
+                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
+                write!(self.writer, "    str x8, [sp, 0x8]\n");
+            }
+        } else {
+            self.has_stack_room = false;
+            map_err! {
+                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
+                write!(self.writer, "    str x8, [sp, 0x0]\n");
+            }
+        }
+
+        self.curr_var_id = None;
+        self.write_newline()
     }
 
     fn generate_expr(
@@ -274,9 +319,15 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         match expr {
             FnCall { id, args } => self.generate_fn_call(id, args, slt),
             Lit { id, lit } => {
-                // We are on a simple literal so we just se the curr_var_id to it's id
-                self.curr_var_id = id;
-                self.generate_lit(lit)
+                // Check if we are on a simple literal
+                if self.curr_var_id.is_some() {
+                    self.generate_lit(lit)
+                } else {
+                    self.curr_var_id = Some(id);
+                    self.generate_lit(lit)?;
+                    self.curr_var_id = None;
+                    Ok(())
+                }
             }
             ID(id) => {
                 // TODO: handle this unwrap
@@ -303,46 +354,38 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     fn generate_lit(&mut self, lit: &'prog Lit) -> codegen::error::Result<()> {
         use Lit::*;
 
-        map_err! {
-            write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id);
-        }
-
         match lit {
             Int(val) => {
                 map_err! {
+                    write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id.unwrap());
                     write!(self.writer, "    mov x8, #{}\n", val);
                 }
             }
             Str(s) => {
-                self.string_literals.push((self.curr_var_id, s));
+                // Check if a similar string literal has already been pushed so we avoid duping items
+                let lit_str_id = if let Some(name) = self
+                    .string_literals
+                    .iter()
+                    .find(|(_, value)| value == s)
+                    .map(|(value, _)| *value)
+                {
+                    name
+                } else {
+                    self.string_literals.push((self.curr_var_id.unwrap(), s));
+                    self.curr_var_id.unwrap()
+                };
+
                 map_err! {
-                    write!(self.writer, "    adrp x8, {}@PAGE\n", self.curr_var_id);
-                    write!(self.writer, "    add x8, x8, {}@PAGEOFF\n", self.curr_var_id);
+                    write!(self.writer, "    // pushing variable {} to x8\n", lit_str_id);
+                    write!(self.writer, "    adrp x8, {}@PAGE\n", lit_str_id);
+                    write!(self.writer, "    add x8, x8, {}@PAGEOFF\n", lit_str_id);
                 }
             }
             Bool(b) => {
                 map_err! {
+                    write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id.unwrap());
                     write!(self.writer, "    mov x8, #{}\n", *b as u8);
                 }
-            }
-        }
-
-        self.write_newline()?;
-
-        if !self.has_stack_room {
-            self.has_stack_room = true;
-            map_err! {
-                // Allocate two spaces and ensures that the stack is 16 aligned
-                write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
-                write!(self.writer, "    add sp, sp, -0x10\n");
-                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id);
-                write!(self.writer, "    str x8, [sp, 0x8]\n");
-            }
-        } else {
-            self.has_stack_room = false;
-            map_err! {
-                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id);
-                write!(self.writer, "    str x8, [sp, 0x0]\n");
             }
         }
 

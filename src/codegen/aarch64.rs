@@ -221,7 +221,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         args.iter().enumerate().for_each(|(i, arg)| {
             match arg {
                 FnCall { .. } => todo!("handle fn return type"),
-                Lit { lit, .. } => match lit {
+                Lit(lit) => match lit {
                     Int(_) => sb.push_str("%d"),
                     Str(_) => sb.push_str("%s"),
                     Bool(_) => sb.push_str("%d"),
@@ -318,17 +318,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         use Expr::*;
         match expr {
             FnCall { id, args } => self.generate_fn_call(id, args, slt),
-            Lit { id, lit } => {
-                // Check if we are on a simple literal
-                if self.curr_var_id.is_some() {
-                    self.generate_lit(lit)
-                } else {
-                    self.curr_var_id = Some(id);
-                    self.generate_lit(lit)?;
-                    self.curr_var_id = None;
-                    Ok(())
-                }
-            }
+            Lit(lit) => self.generate_lit(lit),
             ID(id) => {
                 // TODO: handle this unwrap
                 let var = slt.find_variable(id).unwrap();
@@ -354,10 +344,21 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     fn generate_lit(&mut self, lit: &'prog Lit) -> codegen::error::Result<()> {
         use Lit::*;
 
+        let curr_id = self
+            .curr_var_id
+            .or_else(|| {
+                self.fmt_str_cpt += 1;
+                Some(
+                    self.arena
+                        .strdup(format!("__lit_{}", self.fmt_str_cpt).as_str()),
+                )
+            })
+            .unwrap();
+
         match lit {
             Int(val) => {
                 map_err! {
-                    write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id.unwrap());
+                    write!(self.writer, "    // pushing variable {} to x8\n", curr_id);
                     write!(self.writer, "    mov x8, #{}\n", val);
                 }
             }
@@ -371,8 +372,8 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
                 {
                     name
                 } else {
-                    self.string_literals.push((self.curr_var_id.unwrap(), s));
-                    self.curr_var_id.unwrap()
+                    self.string_literals.push((curr_id, s));
+                    curr_id
                 };
 
                 map_err! {
@@ -383,7 +384,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             }
             Bool(b) => {
                 map_err! {
-                    write!(self.writer, "    // pushing variable {} to x8\n", self.curr_var_id.unwrap());
+                    write!(self.writer, "    // pushing variable {} to x8\n", curr_id);
                     write!(self.writer, "    mov x8, #{}\n", *b as u8);
                 }
             }

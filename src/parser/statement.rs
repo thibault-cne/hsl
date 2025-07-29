@@ -138,15 +138,9 @@ impl<'prog> Visitor for Stmt<'prog> {
         #[allow(clippy::single_match)]
         match self {
             Stmt::Let { id, value } => match value {
-                Expr::Lit {
-                    lit: Lit::Str(s), ..
-                } => slt.add_string(id, s.to_string()),
-                Expr::Lit {
-                    lit: Lit::Int(i), ..
-                } => slt.add_integer(id, *i),
-                Expr::Lit {
-                    lit: Lit::Bool(b), ..
-                } => slt.add_boolean(id, *b),
+                Expr::Lit(Lit::Str(s)) => slt.add_string(id, s.to_string()),
+                Expr::Lit(Lit::Int(i)) => slt.add_integer(id, *i),
+                Expr::Lit(Lit::Bool(b)) => slt.add_boolean(id, *b),
                 _ => (),
             },
             // ast::Stmt::IfStmt {

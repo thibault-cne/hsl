@@ -11,11 +11,16 @@ A long time ago in a galaxy far, far away...            <(-.-)> Start of a progr
     That's one hell of a pilot. first_order
     Judge me by my size, do you ? "This is the first order"
 
-    You'll find I'm full of surprises. first_order
+    Execute order print
+        first_order
+    Order executed                                      <(-.-)> Prints the variable first_order
 
-    You'll find I'm full of surprises. finn             <(-.-)> Prints the variable finn - Luke Skywalker The Empire Strikes Back
+    Execute order print                                 <(-.-)> Prints the variables finn, luke and poe
+        finn
+    Order executed     
 
-    You're eyes can deceive you; don't trust them. luke <(-.-)> Prints the variable luke - Obi-Wan Kenobi A New Hope
-
-    You're eyes can deceive you; don't trust them. poe  <(-.-)> Prints the variable poe
+    Execute order print                                 <(-.-)> Prints the variables finn, luke and poe
+        finn
+        luke
+    Order executed     
 May the force be with you.                              <(-.-)> End of the program

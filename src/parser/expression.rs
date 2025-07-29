@@ -1,37 +1,37 @@
+use crate::ir::Expr;
 use crate::lexer::token::Token;
-use crate::parser::ast;
 use crate::parser::Parser;
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn expression(&mut self) -> ast::Expr {
-        match self.peek() {
-            T![string] | T![int] | T![bool] | T![neg] => ast::Expr::Literal(self.literal()),
-            T![ident] => {
-                let name = {
-                    let ident_token = self.next().unwrap();
-                    self.text(ident_token)
-                };
+    pub fn expression(&mut self) -> Expr<'prog> {
+        let Some(kind) = self.peek() else {
+            panic!("Expected an expression and found nothing");
+        };
 
-                ast::Expr::Ident(name.to_string())
+        match kind {
+            T![String] | T![IntLit] | T![True] | T![False] => Expr::Lit(self.literal()),
+            T![ID] => {
+                // Consumes the token and retrieve the id in the parser state
+                self.consume(T![ID]);
+                Expr::ID(self.arena.strdup(self.id))
             }
-            lit @ T![add] | lit @ T![sub] | lit @ T![mul] | lit @ T![div] | lit @ T![mod] => {
-                self.consume(lit);
-                let value = match self.literal() {
-                    lit @ ast::Lit::Int(_) => lit,
-                    lit => panic!(
-                        "Unexpected value for operation, expected integer got: {:?}",
-                        lit
-                    ),
-                };
-                ast::Expr::Op {
-                    op: ast::Op::try_from(lit).unwrap(),
-                    value,
+            T![OFnCall] => {
+                self.consume(T![OFnCall]);
+                self.consume(T![ID]);
+                let id = self.arena.strdup(self.id);
+
+                let mut args = Vec::new();
+                while !self.check_next(T![CFnCall]) {
+                    args.push(self.expression());
                 }
+
+                self.consume(T![CFnCall]);
+                Expr::FnCall { id, args }
             }
-            kind => panic!("Unknown start of expression: `{}`", kind),
+            kind => panic!("Unknown start of expression: `{kind}`"),
         }
     }
 }

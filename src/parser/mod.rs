@@ -1,33 +1,38 @@
-use crate::{
-    lexer::token::{Token, TokenKind},
-    lexer::Lexer,
-};
+use crate::ir::{Fn, Program};
+use crate::lexer::token::{Token, TokenKind};
+use crate::lexer::Lexer;
 
-pub(crate) mod ast;
-pub(crate) mod expression;
-pub(crate) mod item;
+pub mod expression;
 pub mod literal;
-pub(crate) mod slt;
-pub(crate) mod statement;
+pub mod program;
+pub mod slt;
+pub mod statement;
 
-pub struct Parser<'input, I>
+pub struct Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
+    arena: &'prog crate::arena::Arena<'prog>,
     input: &'input str,
     tokens: std::iter::Peekable<I>,
+
+    id: &'input str,
+    pub has_main: bool,
 }
 
-impl<'input> Parser<'input, TokenIter<'input>> {
-    pub fn new(input: &'input str) -> Parser<TokenIter> {
+impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
+    pub fn new(input: &'input str, arena: &'prog crate::arena::Arena<'prog>) -> Self {
         Parser {
+            arena,
             input,
-            tokens: TokenIter::new(input).peekable(),
+            tokens: Lexer::new(input).peekable(),
+            id: "",
+            has_main: false,
         }
     }
 }
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
@@ -36,16 +41,17 @@ where
         token.text(self.input)
     }
 
-    pub(crate) fn peek(&mut self) -> TokenKind {
-        self.tokens
-            .peek()
-            .map(|token| token.kind)
-            .unwrap_or(T![EOF])
+    pub(crate) fn peek(&mut self) -> Option<TokenKind> {
+        self.tokens.peek().map(|t| t.kind)
     }
 
     /// Check if the next token is of a given kind
-    pub(crate) fn at(&mut self, kind: TokenKind) -> bool {
-        self.peek() == kind
+    pub(crate) fn check_next(&mut self, kind: TokenKind) -> bool {
+        let Some(t_kind) = self.peek() else {
+            return false;
+        };
+
+        t_kind == kind
     }
 
     pub(crate) fn next(&mut self) -> Option<Token> {
@@ -60,58 +66,46 @@ where
     /// or if there is no more tokens to consume.
     pub(crate) fn consume(&mut self, expected: TokenKind) {
         let token = self.next().unwrap_or_else(|| {
-            panic!(
-                "Expected to consume `{}`, but there was no next token.",
-                expected
-            )
+            panic!("Expected to consume `{expected}`, but there was no next token.")
         });
         assert_eq!(
             token.kind, expected,
             "Expected to consume `{}`, but found `{}` instead",
             expected, token.kind
         );
+
+        if matches!(token.kind, T![ID]) {
+            // In this case we update the id state of the parser
+            self.id = self.text(token);
+        }
     }
 
-    pub(crate) fn parse(&mut self) -> ast::Item {
-        // TODO: parse functions declaration before
-        while !self.at(T![start]) {
-            self.next();
+    pub(crate) fn parse(&mut self, program: &mut Program<'prog>) {
+        while !self.check_next(T![EOF]) {
+            program.func.push(self.parse_function());
         }
-        self.consume(T![start]);
-
-        let mut body = Vec::new();
-        while !self.at(T![end]) {
-            body.push(self.statement());
-        }
-
-        self.consume(T![end]);
         self.consume(T![EOF]);
-
-        ast::Item::Main { body }
     }
-}
 
-pub struct TokenIter<'input> {
-    lexer: Lexer<'input>,
-}
+    fn parse_function(&mut self) -> Fn<'prog> {
+        self.consume(T![OFnDecl1]);
+        self.consume(T![ID]);
 
-impl<'input> TokenIter<'input> {
-    pub fn new(input: &'input str) -> TokenIter {
-        TokenIter {
-            lexer: Lexer::new(input),
+        if self.id == "galaxy" {
+            self.has_main = true;
         }
-    }
-}
 
-impl<'input> Iterator for TokenIter<'input> {
-    type Item = Token;
+        let id = self.arena.strdup(self.id);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let next_token = self.lexer.next()?;
-            if !matches!(next_token.kind, T![ws] | T![comment]) {
-                return Some(next_token);
-            }
+        self.consume(T![OFnDecl2]);
+
+        let mut stmts = Vec::new();
+        while !self.check_next(T![CFnDecl]) {
+            stmts.push(self.statement());
         }
+
+        self.consume(T![CFnDecl]);
+
+        Fn { id, stmts }
     }
 }

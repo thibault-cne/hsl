@@ -14,8 +14,8 @@ For now HSL supports the following constructs :
 
 - Variables
 - Print to console
-- Math operations (addition, substraction, multiplication, division and modulus)
-- If then else blocks
+- Math operations (addition, substraction, multiplication, division and modulus) **WIP**
+- If then else blocks **WIP**
 
 **File extension**
 
@@ -24,3 +24,16 @@ Files written in the HyperSpace uses the `.hs` file extension. You can find some
 **Compilation**
 
 For now HSL only compiles to _ARMv8_. The objective in the long term is to compile to multiple targets.
+
+## Examples
+
+You can find a bunch of examples in the `.examples` folder. Here an example of a `Hello World!` program:
+
+
+```
+A long time ago in a galaxy far, far away...            <(-.-)> Start of a function called galaxy (this is the name of the `main` function)
+    Execute order print                                 <(-.-)> Call the print function with only a string literal
+      "Hello World!"
+    Order executed
+May the force be with you.                              <(-.-)> End of the program
+```

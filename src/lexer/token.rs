@@ -1,32 +1,36 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use std::fmt;
 
 #[macro_export]
 macro_rules! T {
-    [string] => { $crate::lexer::token::TokenKind::String };
-    [comment] => { $crate::lexer::token::TokenKind::Comment };
-    [int] => { $crate::lexer::token::TokenKind::Int };
-    [neg] => { $crate::lexer::token::TokenKind::Negation };
-    [bool] => { $crate::lexer::token::TokenKind::Boolean };
-    [ident] => { $crate::lexer::token::TokenKind::Identifier };
-    [let] => { $crate::lexer::token::TokenKind::KeywordLet };
-    [init] => { $crate::lexer::token::TokenKind::KeywordInit };
-    [start] => { $crate::lexer::token::TokenKind::BeginMain };
-    [end] => { $crate::lexer::token::TokenKind::EndMain };
-    [print] => { $crate::lexer::token::TokenKind::Print };
-    [assign_start] => { $crate::lexer::token::TokenKind::KeywordAssignValue };
-    [assign_end] => { $crate::lexer::token::TokenKind::KeywordAssignValueEnd };
-    [set] => { $crate::lexer::token::TokenKind::KeywordSet };
-    [if] => { $crate::lexer::token::TokenKind::KeywordIf };
-    [if_end] => { $crate::lexer::token::TokenKind::KeywordIfEnd };
-    [else] => { $crate::lexer::token::TokenKind::KeywordElse };
-    [add] => { $crate::lexer::token::TokenKind::Add };
-    [sub] => { $crate::lexer::token::TokenKind::Substract };
-    [mul] => { $crate::lexer::token::TokenKind::Multiply };
-    [div] => { $crate::lexer::token::TokenKind::Divide };
-    [mod] => { $crate::lexer::token::TokenKind::Modulus };
-    [ws] => { $crate::lexer::token::TokenKind::Whitespace };
-    [err] => { $crate::lexer::token::TokenKind::Error };
-    [EOF] => { $crate::lexer::token::TokenKind::Eof };
+    [EOF] => { $crate::lexer::token::TokenKind::EOF };
+    [ParseError] => { $crate::lexer::token::TokenKind::ParseError };
+    [ID] => { $crate::lexer::token::TokenKind::ID };
+    [String] => { $crate::lexer::token::TokenKind::String };
+    [CharLit] => { $crate::lexer::token::TokenKind::CharLit };
+    [IntLit] => { $crate::lexer::token::TokenKind::IntLit };
+    [True] => { $crate::lexer::token::TokenKind::True };
+    [False] => { $crate::lexer::token::TokenKind::False };
+    [Not] => { $crate::lexer::token::TokenKind::Not };
+    [Mul] => { $crate::lexer::token::TokenKind::Mul };
+    [Div] => { $crate::lexer::token::TokenKind::Div };
+    [Mod] => { $crate::lexer::token::TokenKind::Mod };
+    [Plus] => { $crate::lexer::token::TokenKind::Plus };
+    [Minus] => { $crate::lexer::token::TokenKind::Minus };
+    [Eq] => { $crate::lexer::token::TokenKind::Eq };
+    [OAssign] => { $crate::lexer::token::TokenKind::OAssign };
+    [Assign] => { $crate::lexer::token::TokenKind::Assign };
+    [CAssign] => { $crate::lexer::token::TokenKind::CAssign };
+    [If] => { $crate::lexer::token::TokenKind::If };
+    [IfEnd] => { $crate::lexer::token::TokenKind::IfEnd};
+    [Else] => { $crate::lexer::token::TokenKind::Else };
+    [Let] => { $crate::lexer::token::TokenKind::Let };
+    [OFnDecl1] => { $crate::lexer::token::TokenKind::OFnDecl1 };
+    [OFnDecl2] => { $crate::lexer::token::TokenKind::OFnDecl2 };
+    [CFnDecl] => { $crate::lexer::token::TokenKind::CFnDecl };
+    [OFnCall] => { $crate::lexer::token::TokenKind::OFnCall };
+    [CFnCall] => { $crate::lexer::token::TokenKind::CFnCall };
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -36,6 +40,10 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn new(kind: TokenKind, span: Span) -> Token {
+        Self { kind, span }
+    }
+
     pub fn text<'input>(&self, input: &'input str) -> &'input str {
         &input[self.span]
     }
@@ -45,7 +53,7 @@ impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:?} - <{}, {}>",
+            "{} - <{}, {}>",
             self.kind, self.span.start, self.span.end
         )
     }
@@ -59,38 +67,41 @@ impl fmt::Display for Token {
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum TokenKind {
-    // Multiple characters
+    // Terminal
+    EOF,
+    ParseError,
+
+    // Values
+    ID,
     String,
-    Comment,
-    Int,
-    Boolean,
-    Identifier,
-    KeywordLet,
-    KeywordInit,
-    // Functions
-    Print,
-    // Assign values block
-    KeywordAssignValue,
-    KeywordAssignValueEnd,
-    KeywordSet,
-    // If then else
-    KeywordIf,
-    KeywordElse,
-    KeywordIfEnd,
-    // Operations
-    Negation,
-    Add,
-    Substract,
-    Multiply,
-    Divide,
-    Modulus,
-    // Main delimiter
-    BeginMain,
-    EndMain,
-    // Misc
-    Whitespace,
-    Error,
-    Eof,
+    CharLit,
+    IntLit,
+    True,
+    False,
+
+    // Puncts
+    Not,
+    Mul,
+    Div,
+    Mod,
+    Plus,
+    Minus,
+    #[allow(dead_code)]
+    Eq,
+
+    // Keywords
+    OAssign,
+    Assign,
+    CAssign,
+    If,
+    IfEnd,
+    Else,
+    Let,
+    OFnDecl1,
+    OFnDecl2,
+    CFnDecl,
+    OFnCall,
+    CFnCall,
 }
 
 impl fmt::Display for TokenKind {
@@ -99,31 +110,33 @@ impl fmt::Display for TokenKind {
             fmt,
             "{}",
             match self {
-                T![string] => "String",
-                T![comment] => "Comment",
-                T![int] => "Int",
-                T![neg] => "Negation",
-                T![bool] => "Boolean",
-                T![ident] => "Identifier",
-                T![let] => "Let",
-                T![init] => "Initial value",
-                T![start] => "Main start",
-                T![end] => "Main end",
-                T![print] => "<print>",
-                T![assign_start] => "Assign value start",
-                T![assign_end] => "Assign value end",
-                T![set] => "Set value",
-                T![if] => "If",
-                T![if_end] => "If end",
-                T![else] => "Else",
-                T![add] => "Addition",
-                T![sub] => "Substraction",
-                T![mul] => "Multiplication",
-                T![div] => "Division",
-                T![mod] => "Mudulus",
-                T![ws] => "<ws>",
-                T![err] => "<?>",
-                T![EOF] => "<EOF>",
+                T![EOF] => "<eof>",
+                T![ParseError] => "<?>",
+                T![ID] => "Identifier",
+                T![String] => "String",
+                T![CharLit] => "Char literal",
+                T![IntLit] => "Integer literal",
+                T![True] => "True",
+                T![False] => "False",
+                T![Not] => "Not",
+                T![Mul] => "Mul",
+                T![Div] => "Div",
+                T![Mod] => "Mod",
+                T![Plus] => "Plus",
+                T![Minus] => "Minus",
+                T![Eq] => "Eq",
+                T![OAssign] => "Open assign",
+                T![Assign] => "Assign",
+                T![CAssign] => "Close assign",
+                T![If] => "If",
+                T![IfEnd] => "IfEnd",
+                T![Else] => "Else",
+                T![Let] => "Let",
+                T![OFnDecl1] => "Opening function declaration 1",
+                T![OFnDecl2] => "Opening function declaration 2",
+                T![CFnDecl] => "Closing function declaration 1",
+                T![OFnCall] => "Opening function call",
+                T![CFnCall] => "Closing function call",
             }
         )
     }
@@ -166,7 +179,7 @@ mod tests {
 
     #[test]
     fn token_kind_display() {
-        assert_eq!(T![string].to_string(), "String");
-        assert_eq!(T![ws].to_string(), "<ws>");
+        assert_eq!(T![String].to_string(), "String");
+        assert_eq!(T![EOF].to_string(), "<eof>");
     }
 }

@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Clone)]
+pub trait Visitor {
+    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable);
+}
+
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct SymbolLookupTable {
     pub variables: HashMap<String, Variable>,
     pub offset: i32,
@@ -16,51 +20,31 @@ impl SymbolLookupTable {
     }
 
     pub fn add_string(&mut self, name: &str, s: String) {
+        self.offset += 1;
         self.variables.insert(
             name.to_string(),
             Variable::new(self.offset, Value::Str(s), self.scope),
         );
-        self.offset -= 16;
     }
 
-    pub fn add_negative_integer(&mut self, name: &str, i: u32) {
-        self.variables.insert(
-            name.to_string(),
-            Variable::new(self.offset, Value::NegInt(i), self.scope),
-        );
-        self.offset -= 16;
-    }
-
-    pub fn add_integer(&mut self, name: &str, i: u32) {
+    pub fn add_integer(&mut self, name: &str, i: i64) {
+        self.offset += 1;
         self.variables.insert(
             name.to_string(),
             Variable::new(self.offset, Value::Int(i), self.scope),
         );
-        self.offset -= 16;
     }
 
     pub fn add_boolean(&mut self, name: &str, b: bool) {
+        self.offset += 1;
         self.variables.insert(
             name.to_string(),
             Variable::new(self.offset, Value::Bool(b), self.scope),
         );
-        self.offset -= 16;
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
         self.variables.get(name)
-    }
-}
-
-impl Default for SymbolLookupTable {
-    fn default() -> SymbolLookupTable {
-        SymbolLookupTable {
-            variables: HashMap::new(),
-            offset: -16,
-            region: 0,
-            scope: 0,
-            children: Vec::new(),
-        }
     }
 }
 
@@ -84,8 +68,7 @@ impl Variable {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Str(String),
-    Int(u32),
-    NegInt(u32),
+    Int(i64),
     Bool(bool),
 }
 
@@ -129,9 +112,8 @@ pub struct NavigableSlt<'a> {
 impl<'a> NavigableSlt<'a> {
     pub fn childs(&'a self) -> ChildIterator<'a> {
         ChildIterator {
-            position: 0,
             parent: self,
-            childs: &self.slt.children,
+            childs: self.slt.children.iter(),
         }
     }
 
@@ -140,6 +122,14 @@ impl<'a> NavigableSlt<'a> {
             Some(var) => Some(var),
             None => self.parent.and_then(|p| p.find_variable(name)),
         }
+    }
+}
+
+impl<'a> core::ops::Deref for NavigableSlt<'a> {
+    type Target = SymbolLookupTable;
+
+    fn deref(&self) -> &Self::Target {
+        self.slt
     }
 }
 
@@ -153,17 +143,15 @@ impl<'a> From<&'a SymbolLookupTable> for NavigableSlt<'a> {
 }
 
 pub struct ChildIterator<'a> {
-    position: usize,
     parent: &'a NavigableSlt<'a>,
-    childs: &'a [SymbolLookupTable],
+    childs: std::slice::Iter<'a, SymbolLookupTable>,
 }
 
 impl<'a> Iterator for ChildIterator<'a> {
     type Item = NavigableSlt<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.position += 1;
-        self.childs.get(self.position - 1).map(|c| NavigableSlt {
+        self.childs.next().map(|c| NavigableSlt {
             slt: c,
             parent: Some(self.parent),
         })

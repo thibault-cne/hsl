@@ -1,117 +1,162 @@
+use crate::ir::{Expr, Lit, Stmt, Unop};
 use crate::lexer::token::Token;
-use crate::parser::ast;
 use crate::parser::Parser;
 
-use super::slt::{Builder, SymbolLookupTable};
+use super::slt::{Builder, SymbolLookupTable, Visitor};
 
-impl<'input, I> Parser<'input, I>
+impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn statement(&mut self) -> ast::Stmt {
-        match self.peek() {
-            T![let] => {
-                self.consume(T![let]);
+    pub fn statement(&mut self) -> Stmt<'prog> {
+        let Some(kind) = self.peek() else {
+            panic!("Expected a statement and found nothing");
+        };
+
+        match kind {
+            T![Let] => {
+                self.consume(T![Let]);
                 let ident = self.next().expect("Expected an identifier after `let`");
                 assert_eq!(
                     ident.kind,
-                    T![ident],
+                    T![ID],
                     "Expected identifier after `let`, but found `{}`",
                     ident.kind
                 );
-                let var_name = self.text(ident).to_string();
-                self.consume(T![init]);
-                let value = Box::new(self.expression());
-                ast::Stmt::Let { var_name, value }
+                let id = self.arena.strdup(self.text(ident));
+                self.consume(T![Assign]);
+                let value = self.expression();
+                Stmt::Let { id, value }
             }
-            T![print] => {
-                self.consume(T![print]);
-                let value = Box::new(self.expression());
+            T![OFnCall] => {
+                self.consume(T![OFnCall]);
+                let ident = self
+                    .next()
+                    .expect("Expected function identifier in fn call");
+                assert_eq!(
+                    ident.kind,
+                    T![ID],
+                    "Expected identifier after `fn call`, but found `{}`",
+                    ident.kind
+                );
+                let id = self.arena.strdup(self.text(ident));
 
-                ast::Stmt::Print { value }
-            }
-            T![assign_start] => {
-                self.consume(T![assign_start]);
-                // TODO: check that the var_name is an ident
-                let var_name = Box::new(self.expression());
-                self.consume(T![set]);
-                let initial_value = Box::new(self.expression());
-
-                let mut operations = Vec::new();
-                while !self.at(T![assign_end]) {
-                    operations.push(self.expression());
+                let mut args = Vec::new();
+                while !self.check_next(T![CFnCall]) {
+                    args.push(self.expression());
                 }
 
-                self.consume(T![assign_end]);
-                ast::Stmt::Assignment {
-                    var_name,
-                    initial_value,
-                    operations,
-                }
+                self.consume(T![CFnCall]);
+                Stmt::FnCall { id, args }
             }
-            T![if] => {
-                self.consume(T![if]);
+            T![OAssign] => {
+                self.consume(T![OAssign]);
+                let ident = self.next().expect("Expected an identifier after `assign`");
+                assert_eq!(
+                    ident.kind,
+                    T![ID],
+                    "Expected identifier after `assign`, but found `{}`",
+                    ident.kind
+                );
+                let id = self.arena.strdup(self.text(ident));
 
-                let condition = Box::new(self.expression());
-                let mut body = Vec::new();
-
-                while !self.at(T![else]) && !self.at(T![if_end]) {
-                    body.push(self.statement());
+                let mut ops = Vec::new();
+                while !self.check_next(T![CAssign]) {
+                    ops.push(self.unary_op());
                 }
 
-                let else_stmt = if self.at(T![else]) {
-                    self.consume(T![else]);
-                    let mut else_body = Vec::new();
-
-                    while !self.at(T![if_end]) {
-                        else_body.push(self.statement());
-                    }
-
-                    Some(else_body)
-                } else {
-                    None
-                };
-
-                self.consume(T![if_end]);
-                ast::Stmt::IfStmt {
-                    condition,
-                    body,
-                    else_stmt,
-                }
+                self.consume(T![CAssign]);
+                Stmt::Assign { id, ops }
             }
-            kind => panic!("Unknown start of expression: `{}`", kind),
+            //T![if] => {
+            //    self.consume(T![if]);
+
+            //    let condition = Box::new(self.expression());
+            //    let mut body = Vec::new();
+
+            //    while !self.at(T![else]) && !self.at(T![if_end]) {
+            //        body.push(self.statement());
+            //    }
+
+            //    let else_stmt = if self.at(T![else]) {
+            //        self.consume(T![else]);
+            //        let mut else_body = Vec::new();
+
+            //        while !self.at(T![if_end]) {
+            //            else_body.push(self.statement());
+            //        }
+
+            //        Some(else_body)
+            //    } else {
+            //        None
+            //    };
+
+            //    self.consume(T![if_end]);
+            //    ast::Stmt::IfStmt {
+            //        condition,
+            //        body,
+            //        else_stmt,
+            //    }
+            //}
+            kind => panic!("Unknown start of expression: `{kind}`"),
+        }
+    }
+
+    fn unary_op(&mut self) -> Unop<'prog> {
+        let Some(kind) = self.peek() else {
+            panic!("Expected an unary operator and found nothing");
+        };
+
+        match kind {
+            T![Plus] => Unop {
+                op: crate::ir::Op::Add,
+                value: self.expression(),
+            },
+            T![Minus] => Unop {
+                op: crate::ir::Op::Sub,
+                value: self.expression(),
+            },
+            T![Div] => Unop {
+                op: crate::ir::Op::Div,
+                value: self.expression(),
+            },
+            T![Mul] => Unop {
+                op: crate::ir::Op::Mul,
+                value: self.expression(),
+            },
+            T![Mod] => Unop {
+                op: crate::ir::Op::Mod,
+                value: self.expression(),
+            },
+            kind => panic!("Unknown start of unary operator: `{kind}`"),
         }
     }
 }
 
-impl ast::Stmt {
-    pub fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
+impl<'prog> Visitor for Stmt<'prog> {
+    fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
+        #[allow(clippy::single_match)]
         match self {
-            ast::Stmt::Let { var_name, value } => {
-                if let ast::Expr::Literal(lit) = &**value {
-                    match lit {
-                        ast::Lit::Str(s) => slt.add_string(var_name, s.to_string()),
-                        ast::Lit::Int(i) => slt.add_integer(var_name, *i),
-                        ast::Lit::NegInt(i) => slt.add_negative_integer(var_name, *i),
-                        ast::Lit::Bool(b) => slt.add_boolean(var_name, *b),
-                    }
-                }
-            }
-            ast::Stmt::Print { .. } => {}
-            ast::Stmt::IfStmt {
-                body, else_stmt, ..
-            } => {
-                builder.new_region(slt);
-                for stmt in body {
-                    stmt.visit(builder, slt.last_children_mut().unwrap());
-                }
-                if let Some(else_stmt) = else_stmt {
-                    builder.new_region(slt);
-                    for stmt in else_stmt {
-                        stmt.visit(builder, slt.last_children_mut().unwrap());
-                    }
-                }
-            }
+            Stmt::Let { id, value } => match value {
+                Expr::Lit(Lit::Str(s)) => slt.add_string(id, s.to_string()),
+                Expr::Lit(Lit::Int(i)) => slt.add_integer(id, *i),
+                Expr::Lit(Lit::Bool(b)) => slt.add_boolean(id, *b),
+                _ => (),
+            },
+            // ast::Stmt::IfStmt {
+            //     body, else_stmt, ..
+            // } => {
+            //     builder.new_region(slt);
+            //     for stmt in body {
+            //         stmt.visit(builder, slt.last_children_mut().unwrap());
+            //     }
+            //     if let Some(else_stmt) = else_stmt {
+            //         builder.new_region(slt);
+            //         for stmt in else_stmt {
+            //             stmt.visit(builder, slt.last_children_mut().unwrap());
+            //         }
+            //     }
+            // }
             _ => (),
         }
     }

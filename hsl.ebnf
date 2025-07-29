@@ -1,0 +1,90 @@
+program = { decl-fn };
+
+decl-fn = OFNDECL-FIRST WS? id WS? OFNDECL-SECOND statements CDECLFN;
+
+statements = { statement };
+
+statement = NEWLINE
+	| decl-statement
+	| func-call
+	| assign-statement;
+
+decl-statement = LET WS? id NEWLINE? ASSIGN WS? expression;
+assign-statement = OASSIGN WS? id assign-statements CASSIGN;
+func-call = OFUNC-CALL WS? id func-args CFUNC-CALL;
+
+assign-statements = { assign-stmt };
+assign-stmt = NEWLINE
+	| ADD WS? integer
+	| MUL WS? integer
+	| MOD WS? integer
+	| SUB WS? integer
+	| DIV WS? integer;
+
+func-args = { func-arg }
+func-arg = NEWLINE
+    | expression;
+
+expression = id | literal;
+
+id = (letter | "_") { letter | dec-digit | "_" };
+
+literal = integer | boolean | string | char;
+
+letter = UPPER-CASE | LOWER-CASE;
+integer = "-"? (dec-integer | hex-integer | oct-integer | bin-integer);
+
+hex-integer = ("0x" | "0X") hex-digit { hex-digit };
+dec-integer = dec-digit { dec-digit };
+oct-integer = ("0o" | "0O") oct-digit { oct-digit };
+bin-integer = ("0b" | "0B") BIN-DIGIT { BIN-DIGIT };
+
+hex-digit = dec-digit | "a" | "b" | "c" | "d" | "e" | "f"
+                      | "A" | "B" | "C" | "D" | "E" | "F";
+dec-digit = oct-digit | "8" | "9";
+oct-digit = BIN-DIGIT | "2" | "3" | "4" | "5" | "6" | "7";
+
+boolean = TRUE | FALSE;
+
+string      = '"' { character } '"';
+char        = "'" character "'";
+character	= printable | char-escape | hex-escape | oct-escape;
+printable   = ' ' | '!' | '"' | '|' | '{' | '}' | '~' | '$' | '#' | '%' | '&' | "'" | '(' | ')' | '*' | '+' | ','
+            | '-' | '.' | '/' | ':' | ';' | '<' | '=' | '>' | '?' | '@' | '[' | '\\' | ']' | letter | dec-digit;
+char-escape = '\\' ESCAPABLE;
+hex-escape  = "\\x" hex-digit hex-digit;
+oct-escape  = '\\' oct-digit oct-digit oct-digit;
+
+ESCAPABLE   = 'n' | 'a' | 'b' | 't' | 'f' | 'r' | 'v' | '\\' | "'" | '"' | '?' | '0';
+
+ADD = "Your lightsabers will make a fine addition to my collection.";
+SUB = "Proceed with the countdown.";
+MUL = "There's too many of them!";
+DIV = "Not to worry, we are still flying half a ship.";
+MOD = "Never tell me the odds!";
+
+TRUE = "From a certain point of view.";
+FALSE = "That's impossible!";
+
+UPPER-CASE = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z";
+LOWER-CASE = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z";
+BIN-DIGIT = "0" | "1";
+
+OFUNC-CALL = "Execute order";
+CFUNC-CALL = "Order executed";
+OASSIGN = "What a piece of junk!";
+CASSIGN = "The garbage will do.";
+ASSIGN =  "I am your father."
+	| "Judge me by my size, do you ?";
+LET =  "I am a big deal in the resistance."
+	| "The force is strong with this one."
+	| "That's one hell of a pilot.";
+
+OFNDECL-FIRST = "A long time ago in a";
+OFNDECL-SECOND = far, far away...";
+CFNDECL = "May the force be with you.";
+
+WS = " ";
+NEWLINE = CR? LF;
+CR = "\r";
+LF = "\n";

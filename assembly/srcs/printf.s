@@ -12,13 +12,14 @@ _start:
 	mov	x2, #4711
 	mov	x3, #3845
 	mov     x10, #65
-	str	x10, [SP, #-32]!
-	str	x2, [SP, #8]
-	str	x3, [SP, #16]
+	add     SP, SP, -0x20
+	str	x10, [SP, 0x0]
+	str	x2, [SP, 0x8]
+	str	x3, [SP, 0x10]
 
-	bl	    _printf	// call printf
+	bl	    _printf	 // call printf
 
-	add	    SP, SP, #32	// Clean up stack
+	add	    SP, SP, 0x20 // Clean up stack
 
 	MOV	X0, #0		// return code
 	ldp	x29, LR, [sp], #16     ; Restore FR, LR

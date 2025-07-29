@@ -1,4 +1,5 @@
 //! Intermediate Representation (IR) of the HSL language
+#![allow(dead_code)]
 
 use crate::lexer::token::TokenKind;
 

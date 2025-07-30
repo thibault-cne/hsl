@@ -82,6 +82,11 @@ impl<'prog> Arena<'prog> {
 
 impl<'prog> Drop for Arena<'prog> {
     fn drop(&mut self) {
+        // Nothing has been allocated
+        if self.end.is_null() {
+            return;
+        }
+
         unsafe {
             while !(*self.end).next.is_null() {
                 let next = (*self.end).next;

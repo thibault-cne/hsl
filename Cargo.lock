@@ -5,12 +5,3 @@ version = 4
 [[package]]
 name = "hsl"
 version = "0.1.0"
-dependencies = [
- "unindent",
-]
-
-[[package]]
-name = "unindent"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"

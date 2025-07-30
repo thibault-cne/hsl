@@ -463,7 +463,6 @@ mod tests {
                 Who, mesa ? 10
             May the force be with you.
         "#;
-        let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
         let tokens: Vec<_> = lexer.tokenize();
         assert_tokens!(
@@ -494,7 +493,6 @@ mod tests {
                 Order executed
             May the force be with you.
         "#;
-        let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
         let tokens: Vec<_> = lexer.tokenize();
         assert_tokens!(
@@ -529,7 +527,6 @@ mod tests {
                 Order executed
             May the force be with you.
         "#;
-        let input = unindent::unindent(input);
         let mut lexer = Lexer::new(&input);
         let tokens: Vec<_> = lexer.tokenize();
         assert_tokens!(

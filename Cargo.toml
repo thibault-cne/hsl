@@ -7,5 +7,3 @@ edition = "2021"
 
 [dependencies]
 
-[dev-dependencies]
-unindent = "0.1"

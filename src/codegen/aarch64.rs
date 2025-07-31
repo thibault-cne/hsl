@@ -42,7 +42,7 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
         cmd: &mut crate::command::Cmd<'prog>,
     ) -> codegen::error::Result<()> {
         map_err! {
-            write!(self.writer, ".global _main\n.align 2\n_main:\n");
+            write!(self.writer, ".global _main\n.p2align 4\n_main:\n");
             write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
             write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
             write!(self.writer, "    mov x29, sp\n");
@@ -111,6 +111,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     ) -> codegen::error::Result<()> {
         // TODO: handle the stack for function call
         map_err! {
+            write!(self.writer, ".global _{}\n.p2align 4\n", func.id);
             write!(self.writer, "_{}:\n", func.id);
             write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
             write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
@@ -166,10 +167,10 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         // This is for macosX variadic are passes onto the stack and other arguments are passed
         // using registers x0 to x7
         assert!(
-            variadic < Some(args.len()),
+            variadic <= Some(args.len()),
             "make sure variadic is smaller than args len"
         );
-        let reg_args = variadic.unwrap_or_else(|| if args.len() > 7 { 7 } else { args.len() });
+        let reg_args = variadic.unwrap_or(if args.len() > 7 { 7 } else { args.len() });
         let stack_args = args.len() - reg_args;
 
         let allocated_space = crate::math::align_bytes(stack_args * 8, 16);
@@ -180,8 +181,8 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
         }
 
-        for i in 0..reg_args {
-            self.generate_expr(&args[i], slt)?;
+        for (i, expr) in args.iter().enumerate().take(reg_args) {
+            self.generate_expr(expr, slt)?;
 
             map_err! {
                 // Load the argument onto the associated register

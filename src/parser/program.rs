@@ -3,7 +3,7 @@ use crate::parser::slt::{Builder, SymbolLookupTable, Visitor};
 
 impl<'prog> Visitor for Program<'prog> {
     fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
-        let Self { func } = self;
+        let Self { func, .. } = self;
 
         builder.new_region(slt);
         func.iter()

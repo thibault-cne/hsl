@@ -31,6 +31,9 @@ macro_rules! T {
     [CFnDecl] => { $crate::lexer::token::TokenKind::CFnDecl };
     [OFnCall] => { $crate::lexer::token::TokenKind::OFnCall };
     [CFnCall] => { $crate::lexer::token::TokenKind::CFnCall };
+    [Variadic] => { $crate::lexer::token::TokenKind::Variadic };
+    [OExtrnFn] => { $crate::lexer::token::TokenKind::OExtrnFn};
+    [CExtrnFn] => { $crate::lexer::token::TokenKind::CExtrnFn};
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -102,6 +105,9 @@ pub enum TokenKind {
     CFnDecl,
     OFnCall,
     CFnCall,
+    Variadic,
+    OExtrnFn,
+    CExtrnFn,
 }
 
 impl fmt::Display for TokenKind {
@@ -137,6 +143,9 @@ impl fmt::Display for TokenKind {
                 T![CFnDecl] => "Closing function declaration 1",
                 T![OFnCall] => "Opening function call",
                 T![CFnCall] => "Closing function call",
+                T![Variadic] => "Variadic declaration",
+                T![OExtrnFn] => "Open extrn function declaration",
+                T![CExtrnFn] => "Clone extrn function declaration",
             }
         )
     }

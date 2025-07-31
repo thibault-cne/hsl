@@ -29,4 +29,7 @@ pub const KEYWORDS: &[(&str, super::token::TokenKind)] = &[
     ("That's one hell of a pilot.", T![Let]),
     ("From a certain point of view.", T![True]),
     ("That's impossible!", T![False]),
+    ("Starfield", T![Variadic]),
+    ("Hypersignal", T![OExtrnFn]),
+    ("Jamsignal", T![CExtrnFn]),
 ];

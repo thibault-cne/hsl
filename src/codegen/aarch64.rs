@@ -4,16 +4,9 @@ use crate::codegen;
 use crate::ir::{Expr, Fn, Lit, Stmt};
 
 pub struct Codegen<'prog, W> {
-    arena: &'prog crate::arena::Arena<'prog>,
-
     // Inputs
-    output_path: &'prog str,
-    object_path: &'prog str,
-    program_path: &'prog str,
-    #[allow(dead_code)]
-    quiet: bool,
-    #[allow(dead_code)]
-    run: bool,
+    arena: &'prog crate::arena::Arena<'prog>,
+    c: &'prog crate::compiler::Compiler<'prog>,
 
     writer: W,
 
@@ -28,11 +21,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     pub fn new(c: &'prog crate::compiler::Compiler, writer: W) -> Self {
         Self {
             arena: c.arena,
-            output_path: c.output_path,
-            object_path: c.object_path,
-            program_path: c.program_path,
-            quiet: c.flags.quiet,
-            run: c.flags.run,
+            c,
 
             writer,
 
@@ -87,8 +76,8 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
             self.writer.flush();
         }
 
-        info!("generated {}", self.output_path);
-        cmd_append!(cmd, "as", "-o", self.object_path, self.output_path);
+        info!("generated {}", self.c.output_path);
+        cmd_append!(cmd, "as", "-o", self.c.object_path, self.c.output_path);
         if let Err(e) = cmd.run_and_reset() {
             return Err(new_error!(from e));
         }
@@ -98,8 +87,8 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
             "-arch",
             "arm64",
             "-o",
-            self.program_path,
-            self.object_path
+            self.c.program_path,
+            self.c.object_path
         );
         if let Err(e) = cmd.run_and_reset() {
             return Err(new_error!(from e));
@@ -137,7 +126,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
 
         // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
         let var_size = slt.variables.len() * 8;
-        let stack_size = crate::math::smallest_multiple_greater_than(16, var_size as _);
+        let stack_size = crate::math::align_bytes(var_size, 16);
 
         map_err! {
             write!(self.writer, "    // pop the stack\n");
@@ -172,53 +161,55 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         args: &'prog [Expr],
         slt: &crate::parser::slt::NavigableSlt<'prog>,
     ) -> codegen::error::Result<()> {
-        // In case of printf function arguments are loaded onto the stack
-        if id == "printf" {
-            // Allocate stack space for arguments on the stack
-            let needed_space = crate::math::smallest_multiple_greater_than(16, args.len() - 1);
-            map_err! {
-                write!(self.writer, "    // calling {id} function\n");
-                write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
-                write!(self.writer, "    str x8, [sp, -{needed_space:#02x}]!\n");
-            }
+        let variadic = self.c.program.get_fn_variadic(id);
 
-            // Get the first argument as the format string
-            let fmt_str = args
-                .first()
-                .expect("unreachable call to printf whithout fmt string");
-            self.generate_expr(fmt_str, slt)?;
+        // This is for macosX variadic are passes onto the stack and other arguments are passed
+        // using registers x0 to x7
+        assert!(
+            variadic < Some(args.len()),
+            "make sure variadic is smaller than args len"
+        );
+        let reg_args = variadic.unwrap_or_else(|| if args.len() > 7 { 7 } else { args.len() });
+        let stack_args = args.len() - reg_args;
+
+        let allocated_space = crate::math::align_bytes(stack_args * 8, 16);
+
+        map_err! {
+            write!(self.writer, "    // calling {id} function\n");
+            write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
+            write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
+        }
+
+        for i in 0..reg_args {
+            self.generate_expr(&args[i], slt)?;
+
             map_err! {
-                // Load the argument onto the stack to allow printf to unstack them and print
-                write!(self.writer, "    // load fmt_str onto x0\n");
-                write!(self.writer, "    mov x0, x8\n");
+                // Load the argument onto the associated register
+                write!(self.writer, "    // load fn arguments onto x{i}\n");
+                write!(self.writer, "    mov x{i}, x8\n");
                 write!(self.writer, "\n");
             }
+        }
 
-            let mut arg_offset = 0;
-            for arg in args.iter().skip(1) {
-                self.generate_expr(arg, slt)?;
-                map_err! {
-                    // Load the argument onto the stack to allow printf to unstack them and print
-                    write!(self.writer, "    // load x8 onto the stack\n");
-                    write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
-                    write!(self.writer, "\n");
-                }
-                arg_offset += 8;
-            }
+        let mut arg_offset = 0;
+        for i in 0..stack_args {
+            self.generate_expr(&args[reg_args + i], slt)?;
 
             map_err! {
-                write!(self.writer, "    // jump to the function\n");
-                write!(self.writer, "    bl _{id}\n");
-                write!(self.writer, "    // pop from the stack the {id} function arguments\n");
-                write!(self.writer, "    add sp, sp, {needed_space:#02x}\n");
-                write!(self.writer, "\n")
+                // Load the argument onto the stack for fn call
+                write!(self.writer, "    // load x8 onto the stack\n");
+                write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
+                write!(self.writer, "\n");
             }
-        } else {
-            map_err! {
-                write!(self.writer, "    // jump to the function\n");
-                write!(self.writer, "    bl _{id}\n");
-                write!(self.writer, "\n")
-            }
+            arg_offset += 8;
+        }
+
+        map_err! {
+            write!(self.writer, "    // jump to the function\n");
+            write!(self.writer, "    bl _{id}\n");
+            write!(self.writer, "    // pop from the stack the {id} function arguments\n");
+            write!(self.writer, "    add sp, sp, {allocated_space:#02x}\n");
+            write!(self.writer, "\n")
         }
     }
 

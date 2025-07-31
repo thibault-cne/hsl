@@ -1,6 +1,13 @@
-program = { decl-fn };
+program = { decl };
 
-decl-fn = OFNDECL-FIRST WS? id WS? OFNDECL-SECOND statements CDECLFN;
+decl = NEWLINE
+	| decl-fn
+	| decl-extrn;
+
+decl-extrn = OEXTRNFN WS? { id variadic? } WS? CEXTRNFN;
+decl-fn = OFNDECL-FIRST WS? id WS? OFNDECL-SECOND WS? variadic? statements CFNDECL;
+
+variadic = VARIADIC (dec-integer | hex-integer | oct-integer | bin-integer);
 
 statements = { statement };
 
@@ -81,8 +88,13 @@ LET =  "I am a big deal in the resistance."
 	| "That's one hell of a pilot.";
 
 OFNDECL-FIRST = "A long time ago in a";
-OFNDECL-SECOND = far, far away...";
+OFNDECL-SECOND = "far, far away...";
 CFNDECL = "May the force be with you.";
+
+OEXTRNFN = "Hypersignal";
+CEXTRNFN = "Jamsignal";
+
+VARIADIC = "Starfield";
 
 WS = " ";
 NEWLINE = CR? LF;

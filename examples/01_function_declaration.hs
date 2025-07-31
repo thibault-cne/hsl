@@ -1,0 +1,15 @@
+Hypersignal
+  printf Starfield 1
+Jamsignal
+
+A long time ago in a galaxy far, far away...
+    Execute order hello_world
+    Order executed
+May the force be with you.
+
+
+A long time ago in a hello_world far, far away...
+    Execute order printf
+      "Hello World!\n"
+    Order executed
+May the force be with you.

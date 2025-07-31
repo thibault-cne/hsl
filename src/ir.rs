@@ -5,11 +5,24 @@ use crate::lexer::token::TokenKind;
 
 pub struct Program<'prog> {
     pub func: Vec<Fn<'prog>>,
+    pub extrn: Vec<Extrn<'prog>>,
+}
+
+pub struct Extrn<'prog> {
+    pub id: &'prog str,
+
+    // Tell if the function has a variadic parameter and if so the value of variadic is
+    // the number of fixed parameters
+    pub variadic: Option<usize>,
 }
 
 pub struct Fn<'prog> {
     pub id: &'prog str,
     pub stmts: Vec<Stmt<'prog>>,
+
+    // Tell if the function has a variadic parameter and if so the value of variadic is
+    // the number of fixed parameters
+    pub variadic: Option<usize>,
 }
 
 pub enum Op {
@@ -58,7 +71,20 @@ pub enum Lit<'prog> {
 
 impl<'prog> Program<'prog> {
     pub fn new() -> Self {
-        Self { func: Vec::new() }
+        Self {
+            func: Vec::new(),
+            extrn: Vec::new(),
+        }
+    }
+
+    pub fn get_fn_variadic(&self, id: &'prog str) -> Option<usize> {
+        if let Some(func) = self.func.iter().find(|f| f.id == id) {
+            func.variadic
+        } else if let Some(func) = self.extrn.iter().find(|f| f.id == id) {
+            func.variadic
+        } else {
+            None
+        }
     }
 }
 

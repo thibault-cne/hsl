@@ -50,15 +50,17 @@ fn main() -> std::process::ExitCode {
     };
 
     let Some(mut c) = compiler::Compiler::new(&arena, default_target.map(|d| d.name())) else {
+        error!("unable to create a compiler instance, it may be because you have wrong file paths");
         return std::process::ExitCode::FAILURE;
     };
 
     info!("compiling files {}", c.flags.source_files.join(", "));
 
-    // TODO: handle file reading error and maybe try to compile all the files and stop the compiler
-    // after
+    // We deliberatly skip this error and just log it to continue compilation and collect has much
+    // errors has possible
     let _ = c.try_for_each_source_files(|c, file| {
         let Ok(content) = std::fs::read_to_string(file) else {
+            error!("unable to read file `{file}` continuing compilation to collect more errors");
             return Err(());
         };
         let mut parser = parser::Parser::new(&content, &arena);
@@ -79,18 +81,18 @@ fn main() -> std::process::ExitCode {
 
     let mut codegen = codegen::build_codegen(&c);
 
-    // Generate the program
-    // TODO: handle error
     if codegen
         .generate_program(&c.program, &program_slt, &mut program_slt_childs, &mut cmd)
         .is_err()
     {
+        error!("an error occured in codegen, please check the logs or file an issue");
         return std::process::ExitCode::FAILURE;
     }
 
-    // If run option unabled than run the program
-    // TODO: handle error
     if c.flags.run && codegen.run_program(&mut cmd).is_err() {
+        error!(
+            "an error occured while running the executable, please check the logs or file an issue"
+        );
         return std::process::ExitCode::FAILURE;
     }
 

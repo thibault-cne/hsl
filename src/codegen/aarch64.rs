@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::codegen;
-use crate::ir::{self, Expr, Fn, Lit, Stmt};
+use crate::ir::{Expr, Fn, Lit, Stmt};
 
 pub struct Codegen<'prog, W> {
     arena: &'prog crate::arena::Arena<'prog>,
@@ -54,36 +54,25 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
     ) -> codegen::error::Result<()> {
         map_err! {
             write!(self.writer, ".global _main\n.align 2\n_main:\n");
-            write!(self.writer, "    // program header\n");
+            write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
             write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
             write!(self.writer, "    mov x29, sp\n");
             write!(self.writer, "\n");
             write!(self.writer, "    // jump to the main function\n");
-            write!(self.writer, "    b _galaxy\n");
-            write!(self.writer, "_end:\n");
-        };
-
-        // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
-        let var_size = slt.variables.len() * 8;
-        let stack_size = crate::math::smallest_multiple_greater_than(16, var_size as _);
-
-        map_err! {
-            write!(self.writer, "    // pop the stack\n");
-            write!(self.writer, "    add sp, sp, {:#02x} // deallocating {} variables\n", stack_size, var_size / 8);
+            write!(self.writer, "    bl _galaxy\n");
+            write!(self.writer, "\n");
+            write!(self.writer, "    // load return address and previous stack pointer\n");
             write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
             write!(self.writer, "    mov x0, #0\n");
-            write!(self.writer, "    mov x16, #1\n");
-            write!(self.writer, "    svc 0\n");
+            write!(self.writer, "    ret\n");
             write!(self.writer, "\n");
-        }
+        };
 
         for func in program.func.iter() {
             self.generate_fn_decl(func, slt, childs)?;
         }
 
         map_err! {
-            write!(self.writer, "    // jump to the end of the program\n");
-            write!(self.writer, "    b _end\n");
             write!(self.writer, ".data\n");
         }
 
@@ -128,12 +117,15 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     fn generate_fn_decl(
         &mut self,
         func: &'prog Fn,
-        _slt: &crate::parser::slt::NavigableSlt<'prog>,
+        slt: &crate::parser::slt::NavigableSlt<'prog>,
         childs: &mut crate::parser::slt::ChildIterator<'prog>,
     ) -> codegen::error::Result<()> {
         // TODO: handle the stack for function call
         map_err! {
             write!(self.writer, "_{}:\n", func.id);
+            write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
+            write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
+            write!(self.writer, "    mov x29, sp\n");
         }
 
         let child = childs.next().unwrap();
@@ -143,7 +135,18 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             self.generate_stmt(stmt, &child, &mut fn_childs)?;
         }
 
-        Ok(())
+        // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
+        let var_size = slt.variables.len() * 8;
+        let stack_size = crate::math::smallest_multiple_greater_than(16, var_size as _);
+
+        map_err! {
+            write!(self.writer, "    // pop the stack\n");
+            write!(self.writer, "    add sp, sp, {:#02x} // deallocating {} variables\n", stack_size, var_size / 8);
+            write!(self.writer, "    // load return address and previous stack pointer\n");
+            write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
+            write!(self.writer, "    ret\n");
+            write!(self.writer, "\n")
+        }
     }
 
     fn generate_stmt(
@@ -169,114 +172,54 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         args: &'prog [Expr],
         slt: &crate::parser::slt::NavigableSlt<'prog>,
     ) -> codegen::error::Result<()> {
-        // Allocate stack space for arguments on the stack
-        let needed_space = (args.len() / 16 + 1) * 16;
-        map_err! {
-            write!(self.writer, "    // allocate needed stack space for print arguments\n");
-            write!(self.writer, "    str x8, [sp, -{:#02x}]!\n", needed_space);
-        }
+        // In case of printf function arguments are loaded onto the stack
+        if id == "printf" {
+            // Allocate stack space for arguments on the stack
+            let needed_space = crate::math::smallest_multiple_greater_than(16, args.len() - 1);
+            map_err! {
+                write!(self.writer, "    // calling {id} function\n");
+                write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
+                write!(self.writer, "    str x8, [sp, -{needed_space:#02x}]!\n");
+            }
 
-        if id == "print" {
+            // Get the first argument as the format string
+            let fmt_str = args
+                .first()
+                .expect("unreachable call to printf whithout fmt string");
+            self.generate_expr(fmt_str, slt)?;
+            map_err! {
+                // Load the argument onto the stack to allow printf to unstack them and print
+                write!(self.writer, "    // load fmt_str onto x0\n");
+                write!(self.writer, "    mov x0, x8\n");
+                write!(self.writer, "\n");
+            }
+
             let mut arg_offset = 0;
-            for arg in args.iter() {
+            for arg in args.iter().skip(1) {
                 self.generate_expr(arg, slt)?;
                 map_err! {
                     // Load the argument onto the stack to allow printf to unstack them and print
                     write!(self.writer, "    // load x8 onto the stack\n");
-                    write!(self.writer, "    str x8, [sp, {:#02x}]\n", arg_offset);
+                    write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
                     write!(self.writer, "\n");
                 }
                 arg_offset += 8;
             }
 
-            // Generate the format string
-            self.generate_fmt_str(args, slt)?;
-
             map_err! {
-                // Call prinf
-                write!(self.writer, "    bl _printf\n");
-                // Unstack the argument
-                write!(self.writer, "    add sp, sp, 0x10\n");
-                write!(self.writer, "\n");
+                write!(self.writer, "    // jump to the function\n");
+                write!(self.writer, "    bl _{id}\n");
+                write!(self.writer, "    // pop from the stack the {id} function arguments\n");
+                write!(self.writer, "    add sp, sp, {needed_space:#02x}\n");
+                write!(self.writer, "\n")
             }
-
-            return Ok(());
-        }
-
-        todo!("implement fn call stmt");
-    }
-
-    /// Generate fmt str for a printf call and store it in the str literals
-    /// it also loads the fmt str to x0 register
-    fn generate_fmt_str(
-        &mut self,
-        args: &'prog [Expr],
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
-    ) -> codegen::error::Result<()> {
-        use ir::Lit::*;
-        use Expr::*;
-
-        let mut sb = String::new();
-
-        args.iter().enumerate().for_each(|(i, arg)| {
-            match arg {
-                FnCall { .. } => todo!("handle fn return type"),
-                Lit(lit) => match lit {
-                    Int(_) => sb.push_str("%d"),
-                    Str(_) => sb.push_str("%s"),
-                    Bool(_) => sb.push_str("%d"),
-                },
-                ID(id) => {
-                    // TODO: handle this unwrap
-                    let var = slt.find_variable(id).unwrap();
-
-                    use crate::parser::slt::Value;
-                    match var.value {
-                        Value::Int(_) => sb.push_str("%d"),
-                        Value::Str(_) => sb.push_str("%s"),
-                        Value::Bool(_) => sb.push_str("%d"),
-                    }
-                }
-            }
-
-            if i != args.len() - 1 {
-                sb.push(' ');
-            } else {
-                sb.push_str("\\n");
-            }
-        });
-
-        // Check if the format string of the same format has already been created to
-        // avoid reallocating and identical one
-        let name = if let Some(name) = self
-            .string_literals
-            .iter()
-            .find(|(_, value)| value == &sb.as_str())
-            .map(|(value, _)| *value)
-        {
-            name
         } else {
-            // In this case we created a new string format so increment the fmt_str_cpt
-            self.fmt_str_cpt += 1;
-
-            // We allocate the name and the value in the arena
-            let name = self
-                .arena
-                .strdup(format!("__fmt_str_{}", self.fmt_str_cpt).as_str());
-            let value = self.arena.strdup(sb.as_str());
-
-            self.string_literals.push((name, value));
-
-            name
-        };
-
-        // Load the format string to x0
-        map_err! {
-            write!(self.writer, "    adrp x0, {}@PAGE\n", name);
-            write!(self.writer, "    add x0, x0, {}@PAGEOFF\n", name);
+            map_err! {
+                write!(self.writer, "    // jump to the function\n");
+                write!(self.writer, "    bl _{id}\n");
+                write!(self.writer, "\n")
+            }
         }
-
-        Ok(())
     }
 
     fn generate_let_stmt(

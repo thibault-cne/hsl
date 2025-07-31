@@ -111,13 +111,16 @@ impl<'input> Lexer<'input> {
             };
 
             let Some(r) = self.int_number.checked_mul(radix as u64) else {
-                // TODO: give error report
+                error!("invalid digit character `{x}`, reached overflow by multipying `{}` by radix `{radix}`", self.int_number);
                 return None;
             };
             self.int_number = r;
 
             let Some(r) = self.int_number.checked_add(d as u64) else {
-                // TODO: give error report
+                error!(
+                    "invalid digit character `{x}`, reached overflow by adding `{}` and `{d}`",
+                    self.int_number
+                );
                 return None;
             };
             self.int_number = r;
@@ -141,7 +144,7 @@ impl<'input> Lexer<'input> {
                         x if x == delim => delim,
                         '\\' => '\\',
                         _ => {
-                            // TODO: add error message
+                            error!("invalid escaped character `{x}`");
                             return None;
                         }
                     };
@@ -412,6 +415,12 @@ enum Radix {
     Oct = 8,
     Dec = 10,
     Hex = 16,
+}
+
+impl std::fmt::Display for Radix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", *self as u8)
+    }
 }
 
 #[cfg(test)]

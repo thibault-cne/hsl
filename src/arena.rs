@@ -9,7 +9,6 @@ pub struct Arena<'prog> {
     _lifetime: core::marker::PhantomData<&'prog str>,
 }
 
-// TODO: make it so we can store `Drop` items
 /// A region of an arena
 ///
 /// # Important

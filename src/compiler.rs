@@ -50,9 +50,9 @@ impl<'prog> Compiler<'prog> {
         &mut self.program
     }
 
-    pub fn try_for_each_source_files<F>(&mut self, mut func: F) -> Result<(), ()>
+    pub fn try_for_each_source_files<F, E>(&mut self, mut func: F) -> Result<(), E>
     where
-        F: FnMut(&mut Self, &str) -> Result<(), ()>,
+        F: FnMut(&mut Self, &str) -> Result<(), E>,
     {
         let source_files = core::mem::take(&mut self.flags.source_files);
         let res = source_files.iter().try_for_each(|f| func(self, f));
@@ -84,7 +84,7 @@ fn build_object_and_output_path<'prog>(
     arena: &'prog Arena,
     program_path: &'prog str,
 ) -> Option<(&'prog str, &'prog str)> {
-    let files = crate::fs::Files::new(program_path);
+    let files = crate::fs::Files::new(program_path)?;
 
     let object_path = files.object_path.to_str()?;
     let output_path = files.output_path.to_str()?;

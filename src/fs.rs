@@ -4,21 +4,20 @@ pub struct Files {
 }
 
 impl Files {
-    pub fn new(output_file: &str) -> Self {
-        // TODO: handle this error
-        let garbage_path = get_garbage_base(output_file).unwrap();
+    pub fn new(output_file: &str) -> Option<Self> {
+        let garbage_path = get_garbage_base(output_file)?;
 
-        create_garbage_base(&garbage_path);
+        create_garbage_base(&garbage_path)?;
 
         let output_stem = get_file_stem(output_file).expect("invalid o path");
         let g_path = std::path::Path::new(&garbage_path);
         let output_path = g_path.join(format!("{output_stem}.s")).into_os_string();
         let object_path = g_path.join(format!("{output_stem}.o")).into_os_string();
 
-        Self {
+        Some(Self {
             output_path,
             object_path,
-        }
+        })
     }
 }
 
@@ -43,13 +42,18 @@ pub fn strip_extension(file_path: &str) -> &str {
     unsafe { file_path.get_unchecked(0..(file_path.len() - file_extension.len())) }
 }
 
-pub fn create_garbage_base(path: &str) {
-    // TODO: handle error
+pub fn create_garbage_base(path: &str) -> Option<()> {
     if let Ok(true) = std::fs::exists(path) {
         info!("directory `{}` already exists", path);
+        Some(())
     } else {
-        info!("directory `{}` created", path);
-        let _ = std::fs::create_dir(path);
+        let res = std::fs::create_dir(path).ok();
+        if res.is_none() {
+            error!("unable to create `{path}`");
+        } else {
+            info!("directory `{}` created", path);
+        }
+        res
     }
 }
 

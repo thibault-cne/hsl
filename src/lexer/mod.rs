@@ -183,6 +183,7 @@ impl<'input> Lexer<'input> {
                 Span {
                     start: self.parse_point.position,
                     end: self.parse_point.position,
+                    line: self.parse_point.line_number,
                 },
             );
         };
@@ -200,6 +201,7 @@ impl<'input> Lexer<'input> {
                     Span {
                         start: saved_position,
                         end: self.parse_point.position,
+                        line: self.parse_point.line_number,
                     },
                 );
             }
@@ -218,6 +220,7 @@ impl<'input> Lexer<'input> {
                     Span {
                         start: saved_position,
                         end: self.parse_point.position,
+                        line: self.parse_point.line_number,
                     },
                 );
             }
@@ -237,6 +240,7 @@ impl<'input> Lexer<'input> {
             return Token::new(
                 T![ID],
                 Span {
+                    line: self.parse_point.line_number,
                     start: saved_position,
                     end: self.parse_point.position,
                 },
@@ -257,6 +261,7 @@ impl<'input> Lexer<'input> {
                     return Token::new(
                         T![ParseError],
                         Span {
+                            line: self.parse_point.line_number,
                             start: self.parse_point.position,
                             end: self.parse_point.position,
                         },
@@ -267,6 +272,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![IntLit],
                     Span {
+                        line: self.parse_point.line_number,
                         start: saved_position,
                         end: self.parse_point.position,
                     },
@@ -284,6 +290,7 @@ impl<'input> Lexer<'input> {
                     return Token::new(
                         T![ParseError],
                         Span {
+                            line: self.parse_point.line_number,
                             start: self.parse_point.position,
                             end: self.parse_point.position,
                         },
@@ -294,6 +301,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![IntLit],
                     Span {
+                        line: self.parse_point.line_number,
                         start: saved_position,
                         end: self.parse_point.position,
                     },
@@ -311,6 +319,7 @@ impl<'input> Lexer<'input> {
                     return Token::new(
                         T![ParseError],
                         Span {
+                            line: self.parse_point.line_number,
                             start: self.parse_point.position,
                             end: self.parse_point.position,
                         },
@@ -321,6 +330,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![IntLit],
                     Span {
+                        line: self.parse_point.line_number,
                         start: saved_position,
                         end: self.parse_point.position,
                     },
@@ -337,6 +347,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![ParseError],
                     Span {
+                        line: self.parse_point.line_number,
                         start: self.parse_point.position,
                         end: self.parse_point.position,
                     },
@@ -346,6 +357,7 @@ impl<'input> Lexer<'input> {
             return Token::new(
                 T![String],
                 Span {
+                    line: self.parse_point.line_number,
                     start: saved_position,
                     end: self.parse_point.position,
                 },
@@ -360,6 +372,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![ParseError],
                     Span {
+                        line: self.parse_point.line_number,
                         start: self.parse_point.position,
                         end: self.parse_point.position,
                     },
@@ -374,6 +387,7 @@ impl<'input> Lexer<'input> {
                 return Token::new(
                     T![ParseError],
                     Span {
+                        line: self.parse_point.line_number,
                         start: self.parse_point.position,
                         end: self.parse_point.position,
                     },
@@ -385,6 +399,7 @@ impl<'input> Lexer<'input> {
             return Token::new(
                 T![CharLit],
                 Span {
+                    line: self.parse_point.line_number,
                     start: saved_position,
                     end: self.parse_point.position,
                 },
@@ -395,6 +410,7 @@ impl<'input> Lexer<'input> {
         Token::new(
             T![ParseError],
             Span {
+                line: self.parse_point.line_number,
                 start: self.parse_point.position,
                 end: self.parse_point.position,
             },

@@ -1,10 +1,11 @@
+use slt::{Builder, SymbolLookupTable};
+
 use crate::ir::{Extrn, Fn, Program};
 use crate::lexer::token::{Token, TokenKind};
 use crate::lexer::Lexer;
 
 pub mod expression;
 pub mod literal;
-pub mod program;
 pub mod slt;
 pub mod statement;
 
@@ -19,6 +20,7 @@ where
     id: &'input str,
     integer: usize,
     pub has_main: bool,
+    pub err_cpt: usize,
 }
 
 impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
@@ -30,6 +32,7 @@ impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
             id: "",
             integer: 0,
             has_main: false,
+            err_cpt: 0,
         }
     }
 }
@@ -83,11 +86,19 @@ where
         }
     }
 
-    pub(crate) fn parse(&mut self, program: &mut Program<'prog>) {
+    pub(crate) fn parse(
+        &mut self,
+        program: &mut Program<'prog>,
+        slt_builder: &mut Builder,
+        slt: &mut SymbolLookupTable<'prog>,
+    ) {
+        slt_builder.new_region(slt);
         while !self.check_next(T![EOF]) {
             // SAFETY: this is safe since the while loop is still looping
             match self.peek().unwrap() {
-                T![OFnDecl1] => program.func.push(self.parse_function()),
+                T![OFnDecl1] => program
+                    .func
+                    .push(self.parse_function(slt_builder, slt.last_children_mut().unwrap())),
                 T![OExtrnFn] => self.parse_extrn_functions(program),
                 _ => todo!("handle unexpected token"),
             }
@@ -117,7 +128,11 @@ where
         self.consume(T![CExtrnFn]);
     }
 
-    fn parse_function(&mut self) -> Fn<'prog> {
+    fn parse_function(
+        &mut self,
+        slt_builder: &mut Builder,
+        slt: &mut SymbolLookupTable<'prog>,
+    ) -> Fn<'prog> {
         self.consume(T![OFnDecl1]);
         self.consume(T![ID]);
 
@@ -141,9 +156,11 @@ where
             None
         };
 
+        slt_builder.new_region(slt);
+        let child_mut = slt.last_children_mut().unwrap();
         let mut stmts = Vec::new();
         while !self.check_next(T![CFnDecl]) {
-            stmts.push(self.statement());
+            stmts.push(self.statement(slt_builder, child_mut));
         }
 
         self.consume(T![CFnDecl]);

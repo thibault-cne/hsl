@@ -2,13 +2,17 @@ use crate::ir::{Expr, Lit, Stmt, Unop};
 use crate::lexer::token::Token;
 use crate::parser::Parser;
 
-use super::slt::{Builder, SymbolLookupTable, Visitor};
+use super::slt::{Builder, SymbolLookupTable};
 
 impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn statement(&mut self) -> Stmt<'prog> {
+    pub fn statement(
+        &mut self,
+        _slt_builder: &mut Builder,
+        slt: &mut SymbolLookupTable<'prog>,
+    ) -> Stmt<'prog> {
         let Some(kind) = self.peek() else {
             panic!("Expected a statement and found nothing");
         };
@@ -26,6 +30,37 @@ where
                 let id = self.arena.strdup(self.text(ident));
                 self.consume(T![Assign]);
                 let value = self.expression();
+
+                let res = match value {
+                    Expr::Lit(Lit::Str(s)) => slt.add_variable((
+                        id,
+                        ident.span,
+                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Str),
+                        s,
+                    )),
+                    Expr::Lit(Lit::Int(i)) => slt.add_variable((
+                        id,
+                        ident.span,
+                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Int),
+                        i,
+                    )),
+                    Expr::Lit(Lit::Bool(b)) => slt.add_variable((
+                        id,
+                        ident.span,
+                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Bool),
+                        b,
+                    )),
+                    _ => unreachable!(),
+                };
+
+                if let Some(prev_var) = res {
+                    self.err_cpt += 1;
+                    error!(
+                        "variable {id} already declared, previous declaration happened on line {}",
+                        prev_var.id.loc.line
+                    );
+                }
+
                 Stmt::Let { id, value }
             }
             T![OFnCall] => {
@@ -129,35 +164,6 @@ where
                 value: self.expression(),
             },
             kind => panic!("Unknown start of unary operator: `{kind}`"),
-        }
-    }
-}
-
-impl<'prog> Visitor<'prog> for Stmt<'prog> {
-    fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable<'prog>) {
-        #[allow(clippy::single_match)]
-        match self {
-            Stmt::Let { id, value } => match value {
-                Expr::Lit(Lit::Str(s)) => slt.add_string(id, s),
-                Expr::Lit(Lit::Int(i)) => slt.add_integer(id, *i),
-                Expr::Lit(Lit::Bool(b)) => slt.add_boolean(id, *b),
-                _ => (),
-            },
-            // ast::Stmt::IfStmt {
-            //     body, else_stmt, ..
-            // } => {
-            //     builder.new_region(slt);
-            //     for stmt in body {
-            //         stmt.visit(builder, slt.last_children_mut().unwrap());
-            //     }
-            //     if let Some(else_stmt) = else_stmt {
-            //         builder.new_region(slt);
-            //         for stmt in else_stmt {
-            //             stmt.visit(builder, slt.last_children_mut().unwrap());
-            //         }
-            //     }
-            // }
-            _ => (),
         }
     }
 }

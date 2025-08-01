@@ -23,7 +23,6 @@ mod parser;
 mod target;
 
 use codegen::Codegen;
-use parser::slt::Visitor;
 
 /// The help string.
 /// This string is printed when the user asks for help.
@@ -55,6 +54,9 @@ fn main() -> std::process::ExitCode {
     };
 
     info!("compiling files {}", c.flags.source_files.join(", "));
+    let mut slt_builder = parser::slt::Builder::new();
+    let mut slt = slt_builder.region();
+    let mut err_cpt = 0;
 
     // We deliberatly skip this error and just log it to continue compilation and collect has much
     // errors has possible
@@ -64,14 +66,17 @@ fn main() -> std::process::ExitCode {
             return Err(());
         };
         let mut parser = parser::Parser::new(&content, &arena);
-        parser.parse(c.program_mut());
+        parser.parse(c.program_mut(), &mut slt_builder, &mut slt);
+        err_cpt += parser.err_cpt;
+
         Ok(())
     });
 
-    let mut builder = parser::slt::Builder::new();
-    let mut slt = builder.region();
+    if err_cpt != 0 {
+        error!("unable to compile your program because of {err_cpt} errors");
+        return std::process::ExitCode::FAILURE;
+    }
 
-    c.program.visit(&mut builder, &mut slt);
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
 
     let mut cmd = command::Cmd::new(c.flags.quiet);

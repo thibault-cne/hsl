@@ -12,7 +12,7 @@ where
         };
 
         match kind {
-            T![String] | T![IntLit] | T![True] | T![False] => Expr::Lit(self.literal()),
+            T![String] | T![Not] | T![IntLit] | T![True] | T![False] => Expr::Lit(self.literal()),
             T![ID] => {
                 // Consumes the token and retrieve the id in the parser state
                 self.consume(T![ID]);

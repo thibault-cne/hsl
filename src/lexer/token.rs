@@ -157,6 +157,8 @@ pub struct Span {
     pub start: usize,
     // exclusive
     pub end: usize,
+
+    pub line: usize,
 }
 
 impl From<Span> for std::ops::Range<usize> {
@@ -165,11 +167,12 @@ impl From<Span> for std::ops::Range<usize> {
     }
 }
 
-impl From<std::ops::Range<usize>> for Span {
-    fn from(range: std::ops::Range<usize>) -> Span {
+impl From<(std::ops::Range<usize>, usize)> for Span {
+    fn from(range: (std::ops::Range<usize>, usize)) -> Span {
         Span {
-            start: range.start,
-            end: range.end,
+            start: range.0.start,
+            end: range.0.end,
+            line: range.1,
         }
     }
 }

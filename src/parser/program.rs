@@ -1,8 +1,8 @@
 use crate::ir::{Fn, Program};
 use crate::parser::slt::{Builder, SymbolLookupTable, Visitor};
 
-impl<'prog> Visitor for Program<'prog> {
-    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
+impl<'prog> Visitor<'prog> for Program<'prog> {
+    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable<'prog>) {
         let Self { func, .. } = self;
 
         builder.new_region(slt);
@@ -11,14 +11,16 @@ impl<'prog> Visitor for Program<'prog> {
     }
 }
 
-impl<'prog> Visitor for Fn<'prog> {
-    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable) {
+impl<'prog> Visitor<'prog> for Fn<'prog> {
+    fn visit(&self, builder: &mut Builder, slt: &mut SymbolLookupTable<'prog>) {
         // TODO: add function declaration to the slt
         let Self { stmts, .. } = self;
 
         builder.new_region(slt);
-        stmts
-            .iter()
-            .for_each(|stmt| stmt.visit(builder, slt.last_children_mut().unwrap()));
+        let child_mut = slt.last_children_mut().unwrap();
+
+        for stmt in stmts {
+            stmt.visit(builder, child_mut);
+        }
     }
 }

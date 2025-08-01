@@ -133,12 +133,12 @@ where
     }
 }
 
-impl<'prog> Visitor for Stmt<'prog> {
-    fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable) {
+impl<'prog> Visitor<'prog> for Stmt<'prog> {
+    fn visit(&self, _builder: &mut Builder, slt: &mut SymbolLookupTable<'prog>) {
         #[allow(clippy::single_match)]
         match self {
             Stmt::Let { id, value } => match value {
-                Expr::Lit(Lit::Str(s)) => slt.add_string(id, s.to_string()),
+                Expr::Lit(Lit::Str(s)) => slt.add_string(id, s),
                 Expr::Lit(Lit::Int(i)) => slt.add_integer(id, *i),
                 Expr::Lit(Lit::Bool(b)) => slt.add_boolean(id, *b),
                 _ => (),

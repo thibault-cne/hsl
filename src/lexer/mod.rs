@@ -248,6 +248,12 @@ impl<'input> Lexer<'input> {
             let saved_position = self.parse_point.position;
             if self.skip_prefix("0x") {
                 let Some(_) = self.parse_number(Radix::Hex) else {
+                    error!(
+                        "line {} position {}: invalid hexadecimal number",
+                        self.parse_point.line_number,
+                        self.parse_point.position - self.parse_point.line_start
+                    );
+
                     return Token::new(
                         T![ParseError],
                         Span {
@@ -269,6 +275,12 @@ impl<'input> Lexer<'input> {
 
             if self.skip_prefix("0") {
                 let Some(_) = self.parse_number(Radix::Oct) else {
+                    error!(
+                        "line {} position {}: invalid octal number",
+                        self.parse_point.line_number,
+                        self.parse_point.position - self.parse_point.line_start
+                    );
+
                     return Token::new(
                         T![ParseError],
                         Span {
@@ -289,7 +301,13 @@ impl<'input> Lexer<'input> {
             }
 
             if x.is_digit(Radix::Dec as u32) {
-                let Some(_) = self.parse_number(Radix::Oct) else {
+                let Some(_) = self.parse_number(Radix::Dec) else {
+                    error!(
+                        "line {} position {}: invalid decimal number",
+                        self.parse_point.line_number,
+                        self.parse_point.position - self.parse_point.line_start
+                    );
+
                     return Token::new(
                         T![ParseError],
                         Span {

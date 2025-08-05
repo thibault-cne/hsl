@@ -56,9 +56,31 @@
       "required": false,
       "types": [
         {
-          "type": "identifier",
+          "type": "extern_function",
           "named": true
-        },
+        }
+      ]
+    }
+  },
+  {
+    "type": "extern_function",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
         {
           "type": "variadic",
           "named": true
@@ -231,16 +253,17 @@
   {
     "type": "variadic",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "unsigned_integer",
-          "named": true
-        }
-      ]
+    "fields": {
+      "count": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "unsigned_integer",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {

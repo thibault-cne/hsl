@@ -35,7 +35,7 @@ impl<'prog> Flags<'prog> {
             } else {
                 // We met the end of the arguments the rest should be input files
                 // Just don't forget to add the current arg to the source files
-                if !arg.ends_with(".hs") {
+                if !arg.ends_with(".hsl") {
                     todo!()
                 } else {
                     flags.source_files.push(arena.strdup(arg.as_str()));
@@ -47,7 +47,7 @@ impl<'prog> Flags<'prog> {
         // Add the rest of the arguments as input files
         args.for_each(|a| {
             // Check if the file as the correct extension else raise an error
-            if !a.ends_with(".hs") {
+            if !a.ends_with(".hsl") {
                 todo!()
             } else {
                 flags.source_files.push(arena.strdup(a.as_str()));

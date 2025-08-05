@@ -4,8 +4,9 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct SymbolLookupTable<'prog> {
-    pub variables: HashMap<&'prog str, Variable<'prog>>,
-    pub funcs: HashMap<&'prog str, Fn<'prog>>,
+    pub variables: HashMap<&'prog str, (Variable<'prog>, crate::lexer::token::Span)>,
+    pub funcs: HashMap<&'prog str, (Fn<'prog>, crate::lexer::token::Span)>,
+
     pub offset: i32,
     pub region: u32,
     pub scope: u32,
@@ -20,21 +21,29 @@ impl<'prog> SymbolLookupTable<'prog> {
 
     /// Add a new variable to the slt. It returns an `Option<()>`, if the result is not
     /// `Option::None` then a variable with the same name has already been pushed to the slt
-    pub fn add_variable<T: Into<Variable<'prog>>>(&mut self, var: T) -> Option<Variable<'prog>> {
+    pub fn add_variable<T: Into<Variable<'prog>>>(
+        &mut self,
+        var: T,
+        span: crate::lexer::token::Span,
+    ) -> Option<(Variable<'prog>, crate::lexer::token::Span)> {
         self.offset += 1;
         let mut var = var.into();
         var.offset = self.offset;
         var.scope = self.scope;
-        self.variables.insert(var.id.id, var)
+        self.variables.insert(var.id, (var, span))
     }
 
-    pub fn add_function<T: Into<Fn<'prog>>>(&mut self, func: T) -> Option<()> {
+    pub fn add_function<T: Into<Fn<'prog>>>(
+        &mut self,
+        func: T,
+        span: crate::lexer::token::Span,
+    ) -> Option<(Fn<'prog>, crate::lexer::token::Span)> {
         let func = func.into();
-        self.funcs.insert(func.id.id, func).map(|_| ())
+        self.funcs.insert(func.id, (func, span))
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.variables.get(name)
+        self.variables.get(name).map(|(var, _)| var)
     }
 }
 
@@ -50,13 +59,8 @@ pub enum InnerType {
     Void,
 }
 
-pub struct Id<'prog> {
-    pub id: &'prog str,
-    pub loc: crate::lexer::token::Span,
-}
-
 pub struct Variable<'prog> {
-    pub id: Id<'prog>,
+    pub id: &'prog str,
     pub ty: Type,
     pub value: Value<'prog>,
     pub offset: i32,
@@ -64,7 +68,7 @@ pub struct Variable<'prog> {
 }
 
 pub struct Fn<'prog> {
-    pub id: Id<'prog>,
+    pub id: &'prog str,
     pub ty: Type,
 }
 
@@ -166,16 +170,13 @@ impl<'prog> Iterator for ChildIterator<'prog> {
 macro_rules! impl_variable_from {
     (@inner) => {};
     (@inner $inner_ty:tt < $from_ty:ty > ; $($tt:tt)*) => {
-        impl<'prog> From<(&'prog str, crate::lexer::token::Span, Type, $from_ty)> for Variable<'prog> {
-            fn from(value: (&'prog str, crate::lexer::token::Span, Type, $from_ty)) -> Self {
+        impl<'prog> From<(&'prog str, Type, $from_ty)> for Variable<'prog> {
+            fn from(value: (&'prog str, Type, $from_ty)) -> Self {
                 Variable {
-                    id: Id {
-                        id: value.0,
-                        loc: value.1
-                    },
-                    ty: value.2,
+                    id: value.0,
+                    ty: value.1,
                     offset: 0,
-                    value: Value::$inner_ty(value.3),
+                    value: Value::$inner_ty(value.2),
                     scope: 0,
                 }
             }

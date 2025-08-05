@@ -32,32 +32,38 @@ where
                 let value = self.expression();
 
                 let res = match value {
-                    Expr::Lit(Lit::Str(s)) => slt.add_variable((
-                        id,
+                    Expr::Lit(Lit::Str(s)) => slt.add_variable(
+                        (
+                            id,
+                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Str),
+                            s,
+                        ),
                         ident.span,
-                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Str),
-                        s,
-                    )),
-                    Expr::Lit(Lit::Int(i)) => slt.add_variable((
-                        id,
+                    ),
+                    Expr::Lit(Lit::Int(i)) => slt.add_variable(
+                        (
+                            id,
+                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Int),
+                            i,
+                        ),
                         ident.span,
-                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Int),
-                        i,
-                    )),
-                    Expr::Lit(Lit::Bool(b)) => slt.add_variable((
-                        id,
+                    ),
+                    Expr::Lit(Lit::Bool(b)) => slt.add_variable(
+                        (
+                            id,
+                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Bool),
+                            b,
+                        ),
                         ident.span,
-                        crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Bool),
-                        b,
-                    )),
+                    ),
                     _ => unreachable!(),
                 };
 
-                if let Some(prev_var) = res {
+                if let Some((_, loc)) = res {
                     self.err_cpt += 1;
                     error!(
                         "variable {id} already declared, previous declaration happened on line {}",
-                        prev_var.id.loc.line
+                        loc.line
                     );
                 }
 

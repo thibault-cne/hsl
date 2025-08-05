@@ -31,7 +31,7 @@ module.exports = grammar({
       "Hypersignal",
       repeat(
         seq(
-          $.identifier,
+          field("name", $.identifier),
           optional($.variadic)
         )
       ),
@@ -78,7 +78,7 @@ module.exports = grammar({
 
     variadic: $ => seq(
       "Starfield",
-      $.unsigned_integer
+      field("variadic", $.unsigned_integer)
     ),
 
     expression: $ => choice($.identifier, $.literal),

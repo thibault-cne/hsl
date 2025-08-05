@@ -29,13 +29,13 @@ module.exports = grammar({
 
     extern_definition: $ => seq(
       "Hypersignal",
-      repeat(
-        seq(
-          field("name", $.identifier),
-          optional($.variadic)
-        )
-      ),
+      repeat($.extern_function),
       "Jamsignal"
+    ),
+
+    extern_function: $ => seq(
+      field("name", $.identifier),
+      optional($.variadic)
     ),
 
     function_definition: $ => seq(
@@ -78,7 +78,7 @@ module.exports = grammar({
 
     variadic: $ => seq(
       "Starfield",
-      field("variadic", $.unsigned_integer)
+      field("count", $.unsigned_integer)
     ),
 
     expression: $ => choice($.identifier, $.literal),

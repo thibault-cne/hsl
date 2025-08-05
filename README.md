@@ -19,7 +19,7 @@ For now HSL supports the following constructs :
 
 **File extension**
 
-Files written in the HyperSpace uses the `.hs` file extension. You can find some examples in the [`examples`](./examples/) folder in order to write your own programs.
+Files written in the HyperSpace uses the `.hsl` file extension. You can find some examples in the [`examples`](./examples/) folder in order to write your own programs.
 
 **Compilation**
 
@@ -27,7 +27,7 @@ For now HSL only compiles to _ARMv8_. The objective in the long term is to compi
 
 ## Examples
 
-You can find a bunch of examples in the `.examples` folder. Here an example of a `Hello World!` program:
+You can find a bunch of examples in the `examples` folder. Here an example of a `Hello World!` program:
 
 
 ```

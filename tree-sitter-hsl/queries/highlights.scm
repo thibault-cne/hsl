@@ -37,20 +37,31 @@
 ; Keywords
 
 [
+  "Execute order"
+  "Order executed"
+  "Starfield"
+] @keyword
+
+[
   "Hypersignal"
   "Jamsignal"
-  "A long time ago in a"
-  "far, far away..."
-  "May the force be with you."
+] @keyword.control.import
+
+[
+  
   "I am a big deal in the resistance."
   "The force is strong with this one."
   "That's one hell of a pilot."
   "I am your father."
   "Judge me by my size, do you ?"
-  "Execute order"
-  "Order executed"
-  "Starfield"
-] @keyword
+] @keyword.storage.type
+
+[
+  
+  "A long time ago in a"
+  "far, far away..."
+  "May the force be with you."
+] @keyword.function
 
 ; Booleans
 

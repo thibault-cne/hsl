@@ -12,7 +12,7 @@ impl Target {
         }
     }
 
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::AArch64Darwin => "aarch64-darwin",
         }
@@ -25,3 +25,15 @@ impl Target {
             .copied()
     }
 }
+
+macro_rules! target_names {
+    ($name:ident => $($target:tt),*) => {
+        pub const $name: &[&'static str] = &[
+            $(
+                Target::$target.name(),
+            ),*
+        ];
+    };
+}
+
+target_names! {TARGET_NAMES => AArch64Darwin}

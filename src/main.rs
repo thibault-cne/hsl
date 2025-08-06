@@ -24,20 +24,6 @@ mod target;
 
 use codegen::Codegen;
 
-/// The help string.
-/// This string is printed when the user asks for help.
-static USAGE: &str = "Usage: 
-    hsl [options]
-
-META OPTIONS
-    -h, --help          show this!
-
-COMPILATION OPTIONS
-    -s, --source        the source file to compile
-    -o, --output        the output file to produce
-    -t, --target        the targeted architecture (must be in [armv8])
-";
-
 fn main() -> std::process::ExitCode {
     // Create the arena allocator to store all compiler variables
     let arena = arena::Arena::new();
@@ -48,9 +34,28 @@ fn main() -> std::process::ExitCode {
         None
     };
 
-    let Some(mut c) = compiler::Compiler::new(&arena, default_target.map(|d| d.name())) else {
+    let args: Vec<_> = std::env::args_os().collect();
+    let flags = flags::Flags::parse(
+        args.first(),
+        args.iter().skip(1).map(|a| a.as_os_str()),
+        default_target.map(|d| d.name()),
+    );
+
+    let flags = match flags {
+        flags::FlagsResult::Ok(flags) => flags,
+        flags::FlagsResult::InvalidFlags(e) => {
+            eprintln!("{e}");
+            return std::process::ExitCode::from(1);
+        }
+        flags::FlagsResult::Help(help) => {
+            eprintln!("{help}");
+            return std::process::ExitCode::SUCCESS;
+        }
+    };
+
+    let Some(mut c) = compiler::Compiler::new(&arena, flags) else {
         error!("unable to create a compiler instance, it may be because you have wrong file paths");
-        return std::process::ExitCode::FAILURE;
+        return std::process::ExitCode::from(2);
     };
 
     info!("compiling files {}", c.flags.source_files.join(", "));
@@ -74,7 +79,7 @@ fn main() -> std::process::ExitCode {
 
     if err_cpt != 0 {
         error!("unable to compile your program because of {err_cpt} errors");
-        return std::process::ExitCode::FAILURE;
+        return std::process::ExitCode::from(3);
     }
 
     let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
@@ -91,14 +96,14 @@ fn main() -> std::process::ExitCode {
         .is_err()
     {
         error!("an error occured in codegen, please check the logs or file an issue");
-        return std::process::ExitCode::FAILURE;
+        return std::process::ExitCode::from(4);
     }
 
     if c.flags.run && codegen.run_program(&mut cmd).is_err() {
         error!(
             "an error occured while running the executable, please check the logs or file an issue"
         );
-        return std::process::ExitCode::FAILURE;
+        return std::process::ExitCode::from(5);
     }
 
     std::process::ExitCode::SUCCESS

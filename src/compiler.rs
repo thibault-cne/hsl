@@ -13,20 +13,13 @@ pub struct Compiler<'prog> {
 }
 
 impl<'prog> Compiler<'prog> {
-    pub fn new(arena: &'prog Arena<'prog>, default_target: Option<&'prog str>) -> Option<Self> {
-        let flags = Flags::parse(default_target, arena);
-
-        if flags.help {
-            eprint!("{}", crate::USAGE);
-            return None;
-        }
-
+    pub fn new(arena: &'prog Arena<'prog>, flags: Flags<'prog>) -> Option<Self> {
         if flags.source_files.is_empty() {
             todo!()
         }
 
         let Some(target) = flags.target_name.and_then(crate::target::Target::by_name) else {
-            eprint!("{}", crate::USAGE);
+            eprint!("{}", flags.help_string());
             return None;
         };
 

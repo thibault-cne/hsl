@@ -14,7 +14,6 @@ pub struct Codegen<'prog, W> {
     string_literals: Vec<(&'prog str, &'prog str)>,
     curr_var_id: Option<&'prog str>,
     fmt_str_cpt: usize,
-    allocated_stack: Option<AllocatedStack>,
 }
 
 impl<'prog, W: io::Write> Codegen<'prog, W> {
@@ -28,7 +27,6 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             string_literals: Vec::new(),
             curr_var_id: None,
             fmt_str_cpt: 0,
-            allocated_stack: None,
         }
     }
 }
@@ -117,53 +115,68 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
             write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
             write!(self.writer, "    mov x29, sp\n");
+            write!(self.writer, "\n");
         }
 
-        let reg_args = func.variadic.unwrap_or(if func.args.len() > 7 {
-            7
-        } else {
-            func.args.len()
-        });
-        let stack_args = func.args.len() - reg_args;
-
-        let allocated_args_space = crate::math::align_bytes(func.args.len() * 8, 16);
         let allocated_stack_size = crate::math::align_bytes(slt.variables.len() * 8, 16);
 
-        map_err! {
-            write!(self.writer, "    // core {} function\n", func.id);
-            write!(self.writer, "    // allocate needed stack space for {} arguments\n", func.id);
-        }
+        if slt.variables.len() > 0 {
+            // Allocate variables on the stack and store them
+            let reg_args = func.variadic.unwrap_or(if func.args.len() > 7 {
+                7
+            } else {
+                func.args.len()
+            });
+            let stack_args = func.args.len() - reg_args;
 
-        let mut stack = AllocatedStack::new(&mut self.writer, allocated_stack_size)?;
-
-        for i in 0..reg_args {
-            stack.allocate();
-
-            map_err! {
-                write!(self.writer, "    str x{i}, [sp, {:#02x}]\n", stack.ptr);
-            }
-        }
-
-        for i in 0..stack_args {
-            let var_offset = allocated_args_space + 2 + i;
-            stack.allocate();
+            let allocated_args_space = crate::math::align_bytes(func.args.len() * 8, 16);
+            let mut arg_index = 0;
 
             map_err! {
-                write!(self.writer, "    ldr x8, [sp, {var_offset:#02x}]\n");
-                write!(self.writer, "    str x8, [sp, {:#02x}]\n", stack.ptr);
+                write!(self.writer, "    // core {} function\n", func.id);
+                write!(self.writer, "    // allocate needed stack space for {} arguments\n", func.id);
+                write!(self.writer, "    add sp, sp, -{allocated_stack_size:#02x}\n");
             }
-        }
 
-        // Specify that the stack has already allocated space to push on
-        self.allocated_stack = Some(stack);
+            self.write_newline()?;
+
+            map_err! {
+                write!(self.writer, "    // load {} arguments onto the stack\n", func.id);
+            }
+
+            for i in 0..reg_args {
+                arg_index += 1;
+                map_err! {
+                    write!(self.writer, "    str x{i}, [x29, -{:#02x}]\n", arg_index * 8);
+                }
+            }
+
+            for i in 0..stack_args {
+                let var_offset = allocated_args_space + 2 + i;
+                arg_index += 1;
+
+                map_err! {
+                    write!(self.writer, "    ldr x8, [x29, -{var_offset:#02x}]\n");
+                    write!(self.writer, "    str x8, [x29, -{:#02x}]\n", arg_index * 8);
+                }
+            }
+
+            self.write_newline()?;
+        }
 
         for stmt in func.stmts.iter() {
             self.generate_stmt(stmt, slt, childs)?;
         }
 
+        if slt.variables.len() > 0 {
+            map_err! {
+                write!(self.writer, "    // pop the stack (deallocating {} variables)\n", slt.variables.len());
+                write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x}\n");
+                write!(self.writer, "\n");
+            }
+        }
+
         map_err! {
-            write!(self.writer, "    // pop the stack\n");
-            write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x} // deallocating {} variables\n", slt.variables.len());
             write!(self.writer, "    // load return address and previous stack pointer\n");
             write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
             write!(self.writer, "    ret\n");
@@ -209,41 +222,61 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
 
         map_err! {
             write!(self.writer, "    // calling {id} function\n");
-            write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
-            write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
         }
 
-        for (i, expr) in args.iter().enumerate().take(reg_args) {
-            self.generate_expr(expr, slt)?;
-
+        if reg_args > 0 {
             map_err! {
-                // Load the argument onto the associated register
-                write!(self.writer, "    // load fn arguments onto x{i}\n");
-                write!(self.writer, "    mov x{i}, x8\n");
+                write!(self.writer, "    // load {} arguments onto the associated registers\n", id);
                 write!(self.writer, "\n");
+            }
+
+            for (i, expr) in args.iter().enumerate().take(reg_args) {
+                self.generate_expr(expr, slt)?;
+
+                map_err! {
+                    // Load the argument onto the associated register
+                    write!(self.writer, "    // load fn arguments onto x{i}\n");
+                    write!(self.writer, "    mov x{i}, x8\n");
+                    write!(self.writer, "\n");
+                }
             }
         }
 
-        let mut arg_offset = 0;
-        for i in 0..stack_args {
-            self.generate_expr(&args[reg_args + i], slt)?;
-
+        if stack_args > 0 {
             map_err! {
-                // Load the argument onto the stack for fn call
-                write!(self.writer, "    // load x8 onto the stack\n");
-                write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
-                write!(self.writer, "\n");
+                write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
+                write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
             }
-            arg_offset += 8;
+
+            let mut arg_offset = 0;
+            for i in 0..stack_args {
+                self.generate_expr(&args[reg_args + i], slt)?;
+
+                map_err! {
+                    // Load the argument onto the stack for fn call
+                    write!(self.writer, "    // load x8 onto the stack\n");
+                    write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
+                    write!(self.writer, "\n");
+                }
+                arg_offset += 8;
+            }
         }
 
         map_err! {
             write!(self.writer, "    // jump to the function\n");
             write!(self.writer, "    bl _{id}\n");
-            write!(self.writer, "    // pop from the stack the {id} function arguments\n");
-            write!(self.writer, "    add sp, sp, {allocated_space:#02x}\n");
-            write!(self.writer, "\n")
+            write!(self.writer, "\n");
         }
+
+        if stack_args > 0 {
+            map_err! {
+                write!(self.writer, "    // pop from the stack the {id} function arguments\n");
+                write!(self.writer, "    add sp, sp, {allocated_space:#02x}\n");
+                write!(self.writer, "\n");
+            }
+        }
+
+        Ok(())
     }
 
     fn generate_let_stmt<'a>(
@@ -255,25 +288,11 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         self.curr_var_id = Some(id);
         // Value is loaded inside the x8 register we need to store it on the stack
         self.generate_expr(value, slt)?;
+        let var = slt.get_variable(id).expect("cannot find variable");
 
-        let stack = match self.allocated_stack.as_mut() {
-            Some(stack) if stack.has_room() => stack,
-            _ => {
-                map_err! {
-                    // Allocate two spaces and ensures that the stack is 16 aligned
-                    write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
-                }
-
-                let stack = AllocatedStack::new(&mut self.writer, 0x10)?;
-                self.allocated_stack = Some(stack);
-                self.allocated_stack.as_mut().unwrap()
-            }
-        };
-
-        stack.allocate();
         map_err! {
             write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
-            write!(self.writer, "    str x8, [sp, {:#02x}]\n", stack.ptr);
+            write!(self.writer, "    str x8, [x29, -{:#02x}]\n", var.offset * 8);
         }
 
         self.curr_var_id = None;
@@ -358,29 +377,5 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         map_err! {
             write!(self.writer, "\n")
         }
-    }
-}
-
-struct AllocatedStack {
-    ptr: usize,
-}
-
-impl AllocatedStack {
-    fn new<W: io::Write>(writer: &mut W, allocated_size: usize) -> codegen::error::Result<Self> {
-        map_err! {
-            write!(writer, "    add sp, sp, -{allocated_size:#02x}\n");
-        }
-
-        Ok(Self {
-            ptr: allocated_size,
-        })
-    }
-
-    fn allocate(&mut self) {
-        self.ptr -= 8;
-    }
-
-    fn has_room(&self) -> bool {
-        self.ptr > 0
     }
 }

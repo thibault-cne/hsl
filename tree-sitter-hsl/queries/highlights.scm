@@ -17,15 +17,15 @@
 (function_definition
   name: (identifier) @function)
 
-; Variadics
+; Function parameters
 
-(variadic
-  count: (unsigned_integer) @constant.numeric.integer)
+(function_argument
+  id: (identifier) @variable.parameter)
 
 ; Literals
 
-(integer) @constant.builtin
-(bool) @constant.builtin
+(unsigned_integer) @constant.numeric.integer
+(integer) @constant.numeric.integer
 
 (char) @string
 (string) @string
@@ -40,6 +40,8 @@
   "Execute order"
   "Order executed"
   "Starfield"
+  "Cargo"
+  "UnloadCargo"
 ] @keyword
 
 [
@@ -62,6 +64,14 @@
   "far, far away..."
   "May the force be with you."
 ] @keyword.function
+
+; Types
+
+[
+  "Holotext"
+  "Credit"
+  "Signal"
+] @type.builtin
 
 ; Booleans
 

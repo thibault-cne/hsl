@@ -43,8 +43,24 @@ module.exports = grammar({
       field("name", $.identifier),
       "far, far away...",
       optional($.variadic),
+      optional($.function_arguments),
       repeat($.statement),
       "May the force be with you."
+    ),
+
+    function_arguments: $ => seq(
+      "Cargo",
+      repeat($.function_argument),
+      "UnloadCargo"
+    ),
+
+    function_argument: $ => seq(
+      choice(
+        "Holotext",
+        "Credit",
+        "Signal"
+      ),
+      field("id", $.identifier)
     ),
 
     statement: $ => choice(

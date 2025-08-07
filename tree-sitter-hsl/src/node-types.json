@@ -89,6 +89,37 @@
     }
   },
   {
+    "type": "function_argument",
+    "named": true,
+    "fields": {
+      "id": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "function_arguments",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "function_argument",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "function_call",
     "named": true,
     "fields": {
@@ -133,6 +164,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "function_arguments",
+          "named": true
+        },
         {
           "type": "statement",
           "named": true
@@ -287,11 +322,23 @@
     "named": false
   },
   {
+    "type": "Cargo",
+    "named": false
+  },
+  {
+    "type": "Credit",
+    "named": false
+  },
+  {
     "type": "Execute order",
     "named": false
   },
   {
     "type": "From a certain point of view.",
+    "named": false
+  },
+  {
+    "type": "Holotext",
     "named": false
   },
   {
@@ -323,6 +370,10 @@
     "named": false
   },
   {
+    "type": "Signal",
+    "named": false
+  },
+  {
     "type": "Starfield",
     "named": false
   },
@@ -336,6 +387,10 @@
   },
   {
     "type": "The force is strong with this one.",
+    "named": false
+  },
+  {
+    "type": "UnloadCargo",
     "named": false
   },
   {

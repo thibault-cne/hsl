@@ -14,8 +14,14 @@ For now HSL supports the following constructs :
 
 - Variables
 - Print to console
-- Math operations (addition, substraction, multiplication, division and modulus) **WIP**
-- If then else blocks **WIP**
+- Function definition (with parameters)
+
+**TODO**
+
+- Sementic controls
+- Handle functions with variadic arguments
+- Math operations (addition, substraction, multiplication, division and modulus)
+- If then else blocks
 
 **File extension**
 
@@ -32,7 +38,7 @@ You can find a bunch of examples in the `examples` folder. Here an example of a 
 
 ```
 A long time ago in a galaxy far, far away...            <(-.-)> Start of a function called galaxy (this is the name of the `main` function)
-    Execute order print                                 <(-.-)> Call the print function with only a string literal
+    Execute order printf                                <(-.-)> Call the printf function with only a string literal
       "Hello World!"
     Order executed
 May the force be with you.                              <(-.-)> End of the program

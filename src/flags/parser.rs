@@ -29,7 +29,7 @@ impl fmt::Display for Flag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Self::Short(short) => write!(f, "-{}", *short as char),
-            Self::Long(long) => write!(f, "--{}", long),
+            Self::Long(long) => write!(f, "--{long}"),
         }
     }
 }

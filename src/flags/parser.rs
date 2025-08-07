@@ -459,21 +459,25 @@ mod parser_test {
             short: Some(b'l'),
             long: "long",
             takes_value: TakesValue::Forbidden,
+            description: "",
         },
         &Arg {
             short: Some(b's'),
             long: "short",
             takes_value: TakesValue::Forbidden,
+            description: "",
         },
         &Arg {
             short: Some(b'c'),
             long: "count",
             takes_value: TakesValue::Necessary(None),
+            description: "",
         },
         &Arg {
             short: Some(b't'),
             long: "type",
             takes_value: TakesValue::Necessary(Some(TEST_ARGS_VALUE)),
+            description: "",
         },
     ];
 

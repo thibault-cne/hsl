@@ -1,6 +1,6 @@
 use std::char;
 
-use rules::{KEYWORDS, PUNCTS};
+use rules::{KEYWORDS, PUNCTS, TYPES};
 use token::{Span, Token};
 
 #[macro_use]
@@ -211,6 +211,25 @@ impl<'input> Lexer<'input> {
         {
             let saved_position = self.parse_point.position;
             if let Some(&kind) = KEYWORDS
+                .iter()
+                .find(|(prefix, _)| self.skip_prefix(prefix))
+                .map(|(_, kind)| kind)
+            {
+                return Token::new(
+                    kind,
+                    Span {
+                        start: saved_position,
+                        end: self.parse_point.position,
+                        line: self.parse_point.line_number,
+                    },
+                );
+            }
+        }
+
+        // Check if we have a type
+        {
+            let saved_position = self.parse_point.position;
+            if let Some(&kind) = TYPES
                 .iter()
                 .find(|(prefix, _)| self.skip_prefix(prefix))
                 .map(|(_, kind)| kind)
@@ -590,5 +609,15 @@ mod tests {
                 T![EOF]
             ]
         );
+    }
+
+    #[test]
+    fn types() {
+        let input = r#"
+            Credit Holotext Signal
+        "#;
+        let mut lexer = Lexer::new(&input);
+        let tokens: Vec<_> = lexer.tokenize();
+        assert_tokens!(tokens, [T![TyInt], T![TyString], T![TyBool], T![EOF]]);
     }
 }

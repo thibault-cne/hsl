@@ -19,6 +19,9 @@ macro_rules! T {
     [Plus] => { $crate::lexer::token::TokenKind::Plus };
     [Minus] => { $crate::lexer::token::TokenKind::Minus };
     [Eq] => { $crate::lexer::token::TokenKind::Eq };
+    [TyInt] => { $crate::lexer::token::TokenKind::TyInt };
+    [TyString] => { $crate::lexer::token::TokenKind::TyString };
+    [TyBool] => { $crate::lexer::token::TokenKind::TyBool };
     [OAssign] => { $crate::lexer::token::TokenKind::OAssign };
     [Assign] => { $crate::lexer::token::TokenKind::Assign };
     [CAssign] => { $crate::lexer::token::TokenKind::CAssign };
@@ -29,6 +32,8 @@ macro_rules! T {
     [OFnDecl1] => { $crate::lexer::token::TokenKind::OFnDecl1 };
     [OFnDecl2] => { $crate::lexer::token::TokenKind::OFnDecl2 };
     [CFnDecl] => { $crate::lexer::token::TokenKind::CFnDecl };
+    [OFnParams] => { $crate::lexer::token::TokenKind::OFnParams };
+    [CFnParams] => { $crate::lexer::token::TokenKind::CFnParams };
     [OFnCall] => { $crate::lexer::token::TokenKind::OFnCall };
     [CFnCall] => { $crate::lexer::token::TokenKind::CFnCall };
     [Variadic] => { $crate::lexer::token::TokenKind::Variadic };
@@ -92,6 +97,11 @@ pub enum TokenKind {
     #[allow(dead_code)]
     Eq,
 
+    // Types
+    TyInt,
+    TyString,
+    TyBool,
+
     // Keywords
     OAssign,
     Assign,
@@ -103,6 +113,8 @@ pub enum TokenKind {
     OFnDecl1,
     OFnDecl2,
     CFnDecl,
+    OFnParams,
+    CFnParams,
     OFnCall,
     CFnCall,
     Variadic,
@@ -131,6 +143,9 @@ impl fmt::Display for TokenKind {
                 T![Plus] => "Plus",
                 T![Minus] => "Minus",
                 T![Eq] => "Eq",
+                T![TyInt] => "Type int",
+                T![TyString] => "Type string",
+                T![TyBool] => "Type bool",
                 T![OAssign] => "Open assign",
                 T![Assign] => "Assign",
                 T![CAssign] => "Close assign",
@@ -143,6 +158,8 @@ impl fmt::Display for TokenKind {
                 T![CFnDecl] => "Closing function declaration 1",
                 T![OFnCall] => "Opening function call",
                 T![CFnCall] => "Closing function call",
+                T![OFnParams] => "Opening function parameters",
+                T![CFnParams] => "Closing function params",
                 T![Variadic] => "Variadic declaration",
                 T![OExtrnFn] => "Open extrn function declaration",
                 T![CExtrnFn] => "Clone extrn function declaration",

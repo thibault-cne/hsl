@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct SymbolLookupTable<'prog> {
     pub variables: HashMap<&'prog str, (Variable<'prog>, crate::lexer::token::Span)>,
     pub funcs: HashMap<&'prog str, (Fn<'prog>, crate::lexer::token::Span)>,
@@ -47,32 +47,24 @@ impl<'prog> SymbolLookupTable<'prog> {
     }
 }
 
-pub enum Type {
-    Ptr(InnerType),
-    Val(InnerType),
-}
-
-pub enum InnerType {
-    Str,
-    Int,
-    Bool,
-    Void,
-}
-
+#[derive(Debug)]
 pub struct Variable<'prog> {
     pub id: &'prog str,
-    pub ty: Type,
+    pub ty: crate::ir::Type,
     pub value: Value<'prog>,
     pub offset: i32,
     pub scope: u32,
 }
 
+#[derive(Debug)]
 pub struct Fn<'prog> {
     pub id: &'prog str,
-    pub ty: Type,
+    pub ty: crate::ir::Type,
 }
 
+#[derive(Debug)]
 pub enum Value<'prog> {
+    None,
     Str(&'prog str),
     Int(i64),
     Bool(bool),
@@ -113,13 +105,13 @@ impl<'prog> Builder<'prog> {
     }
 }
 
-pub struct NavigableSlt<'prog> {
+pub struct NavigableSlt<'a, 'prog> {
     pub slt: &'prog SymbolLookupTable<'prog>,
-    pub parent: Option<&'prog NavigableSlt<'prog>>,
+    pub parent: Option<&'a NavigableSlt<'a, 'prog>>,
 }
 
-impl<'prog> NavigableSlt<'prog> {
-    pub fn childs(&'prog self) -> ChildIterator<'prog> {
+impl<'a, 'prog> NavigableSlt<'a, 'prog> {
+    pub fn childs(&'a self) -> ChildIterator<'a, 'prog> {
         ChildIterator {
             parent: self,
             childs: self.slt.children.iter(),
@@ -134,7 +126,7 @@ impl<'prog> NavigableSlt<'prog> {
     }
 }
 
-impl<'prog> core::ops::Deref for NavigableSlt<'prog> {
+impl<'a, 'prog> core::ops::Deref for NavigableSlt<'a, 'prog> {
     type Target = SymbolLookupTable<'prog>;
 
     fn deref(&self) -> &Self::Target {
@@ -142,7 +134,7 @@ impl<'prog> core::ops::Deref for NavigableSlt<'prog> {
     }
 }
 
-impl<'prog> From<&'prog SymbolLookupTable<'prog>> for NavigableSlt<'prog> {
+impl<'prog> From<&'prog SymbolLookupTable<'prog>> for NavigableSlt<'prog, 'prog> {
     fn from(value: &'prog SymbolLookupTable<'prog>) -> Self {
         NavigableSlt {
             slt: value,
@@ -151,13 +143,13 @@ impl<'prog> From<&'prog SymbolLookupTable<'prog>> for NavigableSlt<'prog> {
     }
 }
 
-pub struct ChildIterator<'prog> {
-    parent: &'prog NavigableSlt<'prog>,
+pub struct ChildIterator<'a, 'prog> {
+    parent: &'a NavigableSlt<'a, 'prog>,
     childs: std::slice::Iter<'prog, SymbolLookupTable<'prog>>,
 }
 
-impl<'prog> Iterator for ChildIterator<'prog> {
-    type Item = NavigableSlt<'prog>;
+impl<'a, 'prog> Iterator for ChildIterator<'a, 'prog> {
+    type Item = NavigableSlt<'a, 'prog>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.childs.next().map(|c| NavigableSlt {
@@ -170,8 +162,8 @@ impl<'prog> Iterator for ChildIterator<'prog> {
 macro_rules! impl_variable_from {
     (@inner) => {};
     (@inner $inner_ty:tt < $from_ty:ty > ; $($tt:tt)*) => {
-        impl<'prog> From<(&'prog str, Type, $from_ty)> for Variable<'prog> {
-            fn from(value: (&'prog str, Type, $from_ty)) -> Self {
+        impl<'prog> From<(&'prog str, crate::ir::Type, $from_ty)> for Variable<'prog> {
+            fn from(value: (&'prog str, crate::ir::Type, $from_ty)) -> Self {
                 Variable {
                     id: value.0,
                     ty: value.1,
@@ -193,4 +185,16 @@ impl_variable_from! {
     Str<&'prog str>;
     Bool<bool>;
     Int<i64>;
+}
+
+impl<'prog> From<(&'prog str, crate::ir::Type)> for Variable<'prog> {
+    fn from(value: (&'prog str, crate::ir::Type)) -> Self {
+        Variable {
+            id: value.0,
+            ty: value.1,
+            offset: 0,
+            value: Value::None,
+            scope: 0,
+        }
+    }
 }

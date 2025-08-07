@@ -11,8 +11,8 @@ pub trait Codegen<'prog> {
     fn generate_program(
         &mut self,
         program: &'prog ir::Program,
-        slt: &'prog NavigableSlt<'prog>,
-        childs: &mut ChildIterator<'prog>,
+        slt: &'prog NavigableSlt<'prog, 'prog>,
+        childs: &mut ChildIterator<'prog, 'prog>,
         cmd: &mut Cmd<'prog>,
     ) -> error::Result<()>;
     fn run_program(&mut self, cmd: &mut Cmd<'prog>) -> error::Result<()>;

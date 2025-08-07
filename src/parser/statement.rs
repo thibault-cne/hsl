@@ -1,4 +1,4 @@
-use crate::ir::{Expr, Lit, Stmt, Unop};
+use crate::ir::{Expr, InnerType, Lit, Stmt, Type, Unop};
 use crate::lexer::token::Token;
 use crate::parser::Parser;
 
@@ -32,30 +32,15 @@ where
                 let value = self.expression();
 
                 let res = match value {
-                    Expr::Lit(Lit::Str(s)) => slt.add_variable(
-                        (
-                            id,
-                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Str),
-                            s,
-                        ),
-                        ident.span,
-                    ),
-                    Expr::Lit(Lit::Int(i)) => slt.add_variable(
-                        (
-                            id,
-                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Int),
-                            i,
-                        ),
-                        ident.span,
-                    ),
-                    Expr::Lit(Lit::Bool(b)) => slt.add_variable(
-                        (
-                            id,
-                            crate::parser::slt::Type::Val(crate::parser::slt::InnerType::Bool),
-                            b,
-                        ),
-                        ident.span,
-                    ),
+                    Expr::Lit(Lit::Str(s)) => {
+                        slt.add_variable((id, Type::Val(InnerType::Str), s), ident.span)
+                    }
+                    Expr::Lit(Lit::Int(i)) => {
+                        slt.add_variable((id, Type::Val(InnerType::Int), i), ident.span)
+                    }
+                    Expr::Lit(Lit::Bool(b)) => {
+                        slt.add_variable((id, Type::Val(InnerType::Bool), b), ident.span)
+                    }
                     _ => unreachable!(),
                 };
 

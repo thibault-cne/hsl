@@ -1,6 +1,6 @@
 use slt::{Builder, SymbolLookupTable};
 
-use crate::ir::{Extrn, Fn, Program};
+use crate::ir::{Extrn, Fn, InnerType, Program, Type};
 use crate::lexer::token::{Token, TokenKind};
 use crate::lexer::Lexer;
 
@@ -19,6 +19,7 @@ where
 
     id: &'input str,
     integer: usize,
+    span: crate::lexer::token::Span,
     pub has_main: bool,
     pub err_cpt: usize,
 }
@@ -31,6 +32,7 @@ impl<'input, 'prog> Parser<'input, 'prog, Lexer<'input>> {
             tokens: Lexer::new(input).peekable(),
             id: "",
             integer: 0,
+            span: crate::lexer::token::Span::default(),
             has_main: false,
             err_cpt: 0,
         }
@@ -60,7 +62,12 @@ where
     }
 
     pub(crate) fn next(&mut self) -> Option<Token> {
-        self.tokens.next()
+        if let Some(tok) = self.tokens.next() {
+            self.span = tok.span;
+            Some(tok)
+        } else {
+            None
+        }
     }
 
     /// Move forward one token in the input and check if the kind of the
@@ -92,13 +99,10 @@ where
         slt_builder: &mut Builder,
         slt: &mut SymbolLookupTable<'prog>,
     ) {
-        slt_builder.new_region(slt);
         while !self.check_next(T![EOF]) {
             // SAFETY: this is safe since the while loop is still looping
             match self.peek().unwrap() {
-                T![OFnDecl1] => program
-                    .func
-                    .push(self.parse_function(slt_builder, slt.last_children_mut().unwrap())),
+                T![OFnDecl1] => program.func.push(self.parse_function(slt_builder, slt)),
                 T![OExtrnFn] => self.parse_extrn_functions(program),
                 _ => todo!("handle unexpected token"),
             }
@@ -133,6 +137,9 @@ where
         slt_builder: &mut Builder,
         slt: &mut SymbolLookupTable<'prog>,
     ) -> Fn<'prog> {
+        slt_builder.new_region(slt);
+        let child_mut = slt.last_children_mut().unwrap();
+
         self.consume(T![OFnDecl1]);
         self.consume(T![ID]);
 
@@ -143,6 +150,36 @@ where
         let id = self.arena.strdup(self.id);
 
         self.consume(T![OFnDecl2]);
+
+        // Collect function parameters
+        let mut args = Vec::new();
+        if self.check_next(T![OFnParams]) {
+            self.consume(T![OFnParams]);
+
+            while !self.check_next(T![CFnParams]) {
+                let Some(kind) = self.peek() else {
+                    panic!("expected type token in function params");
+                };
+
+                let ty = match kind {
+                    T![TyInt] => Type::Val(InnerType::Int),
+                    T![TyString] => Type::Val(InnerType::Str),
+                    T![TyBool] => Type::Val(InnerType::Bool),
+                    _ => panic!("unexpected token for type"),
+                };
+                self.consume(kind);
+
+                self.consume(T![ID]);
+
+                let id = self.arena.strdup(self.id);
+
+                args.push((id, ty));
+                child_mut.add_variable((id, ty), self.span);
+            }
+
+            self.consume(T![CFnParams]);
+        }
+
         let variadic = if self.check_next(T![Variadic]) {
             self.consume(T![Variadic]);
             if !self.check_next(T![IntLit]) {
@@ -156,8 +193,6 @@ where
             None
         };
 
-        slt_builder.new_region(slt);
-        let child_mut = slt.last_children_mut().unwrap();
         let mut stmts = Vec::new();
         while !self.check_next(T![CFnDecl]) {
             stmts.push(self.statement(slt_builder, child_mut));
@@ -169,6 +204,7 @@ where
             id,
             stmts,
             variadic,
+            args,
         }
     }
 }

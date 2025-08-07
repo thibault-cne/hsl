@@ -82,17 +82,14 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::from(3);
     }
 
-    let nav_slt: parser::slt::NavigableSlt<'_> = (&slt).into();
+    let nav_slt: parser::slt::NavigableSlt<'_, '_> = (&slt).into();
 
     let mut cmd = command::Cmd::new(c.flags.quiet);
-
-    let program_slt = nav_slt.childs().next().unwrap();
-    let mut program_slt_childs = program_slt.childs();
 
     let mut codegen = codegen::build_codegen(&c);
 
     if codegen
-        .generate_program(&c.program, &program_slt, &mut program_slt_childs, &mut cmd)
+        .generate_program(&c.program, &nav_slt, &mut nav_slt.childs(), &mut cmd)
         .is_err()
     {
         error!("an error occured in codegen, please check the logs or file an issue");

@@ -32,4 +32,12 @@ pub const KEYWORDS: &[(&str, super::token::TokenKind)] = &[
     ("Starfield", T![Variadic]),
     ("Hypersignal", T![OExtrnFn]),
     ("Jamsignal", T![CExtrnFn]),
+    ("Cargo", T![OFnParams]),
+    ("UnloadCargo", T![CFnParams]),
+];
+
+pub const TYPES: &[(&str, super::token::TokenKind)] = &[
+    ("Credit", T![TyInt]),
+    ("Holotext", T![TyString]),
+    ("Signal", T![TyBool]),
 ];

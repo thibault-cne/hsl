@@ -14,7 +14,7 @@ pub struct Codegen<'prog, W> {
     string_literals: Vec<(&'prog str, &'prog str)>,
     curr_var_id: Option<&'prog str>,
     fmt_str_cpt: usize,
-    has_stack_room: bool,
+    allocated_stack: Option<AllocatedStack>,
 }
 
 impl<'prog, W: io::Write> Codegen<'prog, W> {
@@ -28,17 +28,17 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             string_literals: Vec::new(),
             curr_var_id: None,
             fmt_str_cpt: 0,
-            has_stack_room: false,
+            allocated_stack: None,
         }
     }
 }
 
 impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
-    fn generate_program(
+    fn generate_program<'a>(
         &mut self,
         program: &'prog crate::ir::Program,
-        slt: &'prog crate::parser::slt::NavigableSlt<'prog>,
-        childs: &mut crate::parser::slt::ChildIterator<'prog>,
+        _slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
+        childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
         cmd: &mut crate::command::Cmd<'prog>,
     ) -> codegen::error::Result<()> {
         map_err! {
@@ -57,8 +57,9 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
             write!(self.writer, "\n");
         };
 
-        for func in program.func.iter() {
-            self.generate_fn_decl(func, slt, childs)?;
+        for (func, slt) in program.func.iter().zip(childs) {
+            let mut childs = slt.childs();
+            self.generate_fn_decl(func, &slt, &mut childs)?;
         }
 
         map_err! {
@@ -103,11 +104,11 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
 }
 
 impl<'prog, W: io::Write> Codegen<'prog, W> {
-    fn generate_fn_decl(
+    fn generate_fn_decl<'a>(
         &mut self,
         func: &'prog Fn,
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
-        childs: &mut crate::parser::slt::ChildIterator<'prog>,
+        slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
+        childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         // TODO: handle the stack for function call
         map_err! {
@@ -118,20 +119,51 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             write!(self.writer, "    mov x29, sp\n");
         }
 
-        let child = childs.next().unwrap();
-        let mut fn_childs = child.childs();
+        let reg_args = func.variadic.unwrap_or(if func.args.len() > 7 {
+            7
+        } else {
+            func.args.len()
+        });
+        let stack_args = func.args.len() - reg_args;
 
-        for stmt in func.stmts.iter() {
-            self.generate_stmt(stmt, &child, &mut fn_childs)?;
+        let allocated_args_space = crate::math::align_bytes(func.args.len() * 8, 16);
+        let allocated_stack_size = crate::math::align_bytes(slt.variables.len() * 8, 16);
+
+        map_err! {
+            write!(self.writer, "    // core {} function\n", func.id);
+            write!(self.writer, "    // allocate needed stack space for {} arguments\n", func.id);
         }
 
-        // Allocated stack is actually the smallest multiple of 16 greater than 8 times the number of variables
-        let var_size = slt.variables.len() * 8;
-        let stack_size = crate::math::align_bytes(var_size, 16);
+        let mut stack = AllocatedStack::new(&mut self.writer, allocated_stack_size)?;
+
+        for i in 0..reg_args {
+            stack.allocate();
+
+            map_err! {
+                write!(self.writer, "    str x{i}, [sp, {:#02x}]\n", stack.ptr);
+            }
+        }
+
+        for i in 0..stack_args {
+            let var_offset = allocated_args_space + 2 + i;
+            stack.allocate();
+
+            map_err! {
+                write!(self.writer, "    ldr x8, [sp, {var_offset:#02x}]\n");
+                write!(self.writer, "    str x8, [sp, {:#02x}]\n", stack.ptr);
+            }
+        }
+
+        // Specify that the stack has already allocated space to push on
+        self.allocated_stack = Some(stack);
+
+        for stmt in func.stmts.iter() {
+            self.generate_stmt(stmt, slt, childs)?;
+        }
 
         map_err! {
             write!(self.writer, "    // pop the stack\n");
-            write!(self.writer, "    add sp, sp, {:#02x} // deallocating {} variables\n", stack_size, var_size / 8);
+            write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x} // deallocating {} variables\n", slt.variables.len());
             write!(self.writer, "    // load return address and previous stack pointer\n");
             write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
             write!(self.writer, "    ret\n");
@@ -139,11 +171,11 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         }
     }
 
-    fn generate_stmt(
+    fn generate_stmt<'a>(
         &mut self,
         stmt: &'prog Stmt,
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
-        _childs: &mut crate::parser::slt::ChildIterator<'_>,
+        slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
+        _childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         use Stmt::*;
 
@@ -156,11 +188,11 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         }
     }
 
-    fn generate_fn_call(
+    fn generate_fn_call<'a>(
         &mut self,
         id: &'prog str,
         args: &'prog [Expr],
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
+        slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         let variadic = self.c.program.get_fn_variadic(id);
 
@@ -214,41 +246,44 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         }
     }
 
-    fn generate_let_stmt(
+    fn generate_let_stmt<'a>(
         &mut self,
         id: &'prog str,
         value: &'prog Expr,
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
+        slt: &crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         self.curr_var_id = Some(id);
         // Value is loaded inside the x8 register we need to store it on the stack
         self.generate_expr(value, slt)?;
 
-        if !self.has_stack_room {
-            self.has_stack_room = true;
-            map_err! {
-                // Allocate two spaces and ensures that the stack is 16 aligned
-                write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
-                write!(self.writer, "    add sp, sp, -0x10\n");
-                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
-                write!(self.writer, "    str x8, [sp, 0x8]\n");
+        let stack = match self.allocated_stack.as_mut() {
+            Some(stack) if stack.has_room() => stack,
+            _ => {
+                map_err! {
+                    // Allocate two spaces and ensures that the stack is 16 aligned
+                    write!(self.writer, "    // allocate two spaces to the stack and ensures it stays 16 aligned\n");
+                }
+
+                let stack = AllocatedStack::new(&mut self.writer, 0x10)?;
+                self.allocated_stack = Some(stack);
+                self.allocated_stack.as_mut().unwrap()
             }
-        } else {
-            self.has_stack_room = false;
-            map_err! {
-                write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
-                write!(self.writer, "    str x8, [sp, 0x0]\n");
-            }
+        };
+
+        stack.allocate();
+        map_err! {
+            write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
+            write!(self.writer, "    str x8, [sp, {:#02x}]\n", stack.ptr);
         }
 
         self.curr_var_id = None;
         self.write_newline()
     }
 
-    fn generate_expr(
+    fn generate_expr<'a>(
         &mut self,
         expr: &'prog Expr,
-        slt: &crate::parser::slt::NavigableSlt<'prog>,
+        slt: &crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         use Expr::*;
         match expr {
@@ -257,19 +292,10 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             ID(id) => {
                 // TODO: handle this unwrap
                 let var = slt.find_variable(id).unwrap();
-                let diff = slt.slt.scope - var.scope;
+
                 map_err! {
                     write!(self.writer, "    // load var {} into x8\n", id);
-                    write!(self.writer, "    mov x9, x29\n");
-                };
-
-                for _ in 0..diff {
-                    map_err! {
-                        write!(self.writer, "    ldr x9, [x9]\n");
-                    };
-                }
-                map_err! {
-                    write!(self.writer, "    ldr x8, [x9, -{:#02x}]\n", var.offset * 8);
+                    write!(self.writer, "    ldr x8, [x29, -{:#02x}]\n", var.offset * 8);
                     write!(self.writer, "\n")
                 }
             }
@@ -332,5 +358,29 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         map_err! {
             write!(self.writer, "\n")
         }
+    }
+}
+
+struct AllocatedStack {
+    ptr: usize,
+}
+
+impl AllocatedStack {
+    fn new<W: io::Write>(writer: &mut W, allocated_size: usize) -> codegen::error::Result<Self> {
+        map_err! {
+            write!(writer, "    add sp, sp, -{allocated_size:#02x}\n");
+        }
+
+        Ok(Self {
+            ptr: allocated_size,
+        })
+    }
+
+    fn allocate(&mut self) {
+        self.ptr -= 8;
+    }
+
+    fn has_room(&self) -> bool {
+        self.ptr > 0
     }
 }

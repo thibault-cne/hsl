@@ -23,6 +23,7 @@ pub struct Fn<'prog> {
     // Tell if the function has a variadic parameter and if so the value of variadic is
     // the number of fixed parameters
     pub variadic: Option<usize>,
+    pub args: Vec<(&'prog str, Type)>,
 }
 
 pub enum Op {
@@ -32,6 +33,19 @@ pub enum Op {
     Mul,
     Div,
     Mod,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Type {
+    Ptr(InnerType),
+    Val(InnerType),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum InnerType {
+    Int,
+    Str,
+    Bool,
 }
 
 pub enum Stmt<'prog> {

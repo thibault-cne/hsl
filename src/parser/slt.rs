@@ -45,6 +45,10 @@ impl<'prog> SymbolLookupTable<'prog> {
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
         self.variables.get(name).map(|(var, _)| var)
     }
+
+    pub fn get_function(&self, name: &str) -> Option<&Fn> {
+        self.funcs.get(name).map(|(func, _)| func)
+    }
 }
 
 #[derive(Debug)]
@@ -60,6 +64,8 @@ pub struct Variable<'prog> {
 pub struct Fn<'prog> {
     pub id: &'prog str,
     pub ty: crate::ir::Type,
+    pub args: Vec<crate::ir::Type>,
+    pub variadic: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -122,6 +128,13 @@ impl<'a, 'prog> NavigableSlt<'a, 'prog> {
         match self.slt.get_variable(name) {
             Some(var) => Some(var),
             None => self.parent.and_then(|p| p.find_variable(name)),
+        }
+    }
+
+    pub fn find_func(&self, name: &str) -> Option<&Fn<'prog>> {
+        match self.slt.get_function(name) {
+            Some(var) => Some(var),
+            None => self.parent.and_then(|p| p.find_func(name)),
         }
     }
 }
@@ -195,6 +208,28 @@ impl<'prog> From<(&'prog str, crate::ir::Type)> for Variable<'prog> {
             offset: 0,
             value: Value::None,
             scope: 0,
+        }
+    }
+}
+
+impl<'prog> From<&crate::ir::Fn<'prog>> for Fn<'prog> {
+    fn from(value: &crate::ir::Fn<'prog>) -> Self {
+        Self {
+            id: value.id,
+            ty: crate::ir::Type::Void,
+            args: value.args.iter().map(|a| a.1).collect(),
+            variadic: value.variadic,
+        }
+    }
+}
+
+impl<'prog> From<&crate::ir::Extrn<'prog>> for Fn<'prog> {
+    fn from(value: &crate::ir::Extrn<'prog>) -> Self {
+        Self {
+            id: value.id,
+            ty: crate::ir::Type::Void,
+            args: value.args.clone(),
+            variadic: value.variadic,
         }
     }
 }

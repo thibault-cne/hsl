@@ -103,33 +103,59 @@ where
             // SAFETY: this is safe since the while loop is still looping
             match self.peek().unwrap() {
                 T![OFnDecl1] => program.func.push(self.parse_function(slt_builder, slt)),
-                T![OExtrnFn] => self.parse_extrn_functions(program),
+                T![OExtrnFn] => program.extrn.push(self.parse_extrn_function(slt)),
                 _ => todo!("handle unexpected token"),
             }
         }
         self.consume(T![EOF]);
     }
 
-    fn parse_extrn_functions(&mut self, program: &mut Program<'prog>) {
+    fn parse_extrn_function(&mut self, slt: &mut SymbolLookupTable<'prog>) -> Extrn<'prog> {
         self.consume(T![OExtrnFn]);
 
+        self.consume(T![ID]);
+        let id = self.arena.strdup(self.id);
+
+        let variadic = if self.check_next(T![Variadic]) {
+            self.consume(T![Variadic]);
+            self.consume(T![IntLit]);
+
+            Some(self.integer)
+        } else {
+            None
+        };
+
+        let mut args = Vec::new();
         while !self.check_next(T![CExtrnFn]) {
-            self.consume(T![ID]);
-            let id = self.arena.strdup(self.id);
-
-            let variadic = if self.check_next(T![Variadic]) {
-                self.consume(T![Variadic]);
-                self.consume(T![IntLit]);
-
-                Some(self.integer)
-            } else {
-                None
+            let Some(kind) = self.peek() else {
+                panic!("expected type token in function params");
             };
 
-            program.extrn.push(Extrn { id, variadic });
+            let ty = match kind {
+                T![TyInt] => Type::Val(InnerType::Int),
+                T![TyString] => Type::Val(InnerType::Str),
+                T![TyBool] => Type::Val(InnerType::Bool),
+                _ => panic!("unexpected token for type"),
+            };
+            self.consume(kind);
+            args.push(ty);
         }
 
         self.consume(T![CExtrnFn]);
+
+        if let Some(variadic) = variadic {
+            if args.len() != variadic {
+                error!(
+                    "invalid amount of fixed external function arguments given for {id} please verify it"
+                );
+                self.err_cpt += 1;
+            }
+        }
+
+        let extrn = Extrn { id, variadic, args };
+        slt.add_function(&extrn, self.span);
+
+        extrn
     }
 
     fn parse_function(
@@ -200,11 +226,15 @@ where
 
         self.consume(T![CFnDecl]);
 
-        Fn {
+        let func = Fn {
             id,
             stmts,
             variadic,
             args,
-        }
+        };
+
+        slt.add_function(&func, self.span);
+
+        func
     }
 }

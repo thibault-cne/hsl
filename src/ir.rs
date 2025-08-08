@@ -1,6 +1,8 @@
 //! Intermediate Representation (IR) of the HSL language
 #![allow(dead_code)]
 
+use core::fmt;
+
 use crate::lexer::token::TokenKind;
 
 pub struct Program<'prog> {
@@ -14,6 +16,7 @@ pub struct Extrn<'prog> {
     // Tell if the function has a variadic parameter and if so the value of variadic is
     // the number of fixed parameters
     pub variadic: Option<usize>,
+    pub args: Vec<Type>,
 }
 
 pub struct Fn<'prog> {
@@ -35,13 +38,14 @@ pub enum Op {
     Mod,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Ptr(InnerType),
     Val(InnerType),
+    Void,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InnerType {
     Int,
     Str,
@@ -114,6 +118,26 @@ impl TryFrom<TokenKind> for Op {
             T![Mul] => Ok(Self::Mul),
             T![Mod] => Ok(Self::Mod),
             _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ptr(inner) => write!(f, "pointer({inner})"),
+            Self::Val(inner) => write!(f, "value({inner})"),
+            Self::Void => write!(f, "void"),
+        }
+    }
+}
+
+impl fmt::Display for InnerType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Int => write!(f, "Credit"),
+            Self::Str => write!(f, "Holotext"),
+            Self::Bool => write!(f, "Signal"),
         }
     }
 }

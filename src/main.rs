@@ -20,6 +20,7 @@ mod fs;
 mod ir;
 mod math;
 mod parser;
+mod semantic;
 mod target;
 
 use codegen::Codegen;
@@ -84,8 +85,17 @@ fn main() -> std::process::ExitCode {
 
     let nav_slt: parser::slt::NavigableSlt<'_, '_> = (&slt).into();
 
-    let mut cmd = command::Cmd::new(c.flags.quiet);
+    // Run semantic controls
+    {
+        let err_cpt = semantic::validate(&c.program, &nav_slt);
 
+        if err_cpt > 0 {
+            error!("unable to compile your program because of {err_cpt} semantic errors");
+            return std::process::ExitCode::from(4);
+        }
+    }
+
+    let mut cmd = command::Cmd::new(c.flags.quiet);
     let mut codegen = codegen::build_codegen(&c);
 
     if codegen
@@ -93,14 +103,14 @@ fn main() -> std::process::ExitCode {
         .is_err()
     {
         error!("an error occured in codegen, please check the logs or file an issue");
-        return std::process::ExitCode::from(4);
+        return std::process::ExitCode::from(5);
     }
 
     if c.flags.run && codegen.run_program(&mut cmd).is_err() {
         error!(
             "an error occured while running the executable, please check the logs or file an issue"
         );
-        return std::process::ExitCode::from(5);
+        return std::process::ExitCode::from(6);
     }
 
     std::process::ExitCode::SUCCESS

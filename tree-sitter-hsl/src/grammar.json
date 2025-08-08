@@ -18,7 +18,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "extern_definition"
+          "name": "extern_function"
         }
       ]
     },
@@ -35,29 +35,13 @@
         }
       ]
     },
-    "extern_definition": {
+    "extern_function": {
       "type": "SEQ",
       "members": [
         {
           "type": "STRING",
           "value": "Hypersignal"
         },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SYMBOL",
-            "name": "extern_function"
-          }
-        },
-        {
-          "type": "STRING",
-          "value": "Jamsignal"
-        }
-      ]
-    },
-    "extern_function": {
-      "type": "SEQ",
-      "members": [
         {
           "type": "FIELD",
           "name": "name",
@@ -77,6 +61,22 @@
               "type": "BLANK"
             }
           ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "function_arguments"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "Jamsignal"
         }
       ]
     },

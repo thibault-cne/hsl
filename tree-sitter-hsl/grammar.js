@@ -22,20 +22,17 @@ module.exports = grammar({
 
     _definition: $ => choice(
       $.function_definition,
-      $.extern_definition
+      $.extern_function
     ),
 
     line_comment: $ => seq('<(-.-)>', /.*/),
 
-    extern_definition: $ => seq(
-      "Hypersignal",
-      repeat($.extern_function),
-      "Jamsignal"
-    ),
-
     extern_function: $ => seq(
+      "Hypersignal",
       field("name", $.identifier),
-      optional($.variadic)
+      optional($.variadic),
+      optional($.function_arguments),
+      "Jamsignal"
     ),
 
     function_definition: $ => seq(

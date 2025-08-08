@@ -48,21 +48,6 @@
     }
   },
   {
-    "type": "extern_definition",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "extern_function",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "extern_function",
     "named": true,
     "fields": {
@@ -78,9 +63,13 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "function_arguments",
+          "named": true
+        },
         {
           "type": "variadic",
           "named": true
@@ -237,7 +226,7 @@
       "required": false,
       "types": [
         {
-          "type": "extern_definition",
+          "type": "extern_function",
           "named": true
         },
         {

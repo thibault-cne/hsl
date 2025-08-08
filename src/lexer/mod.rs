@@ -56,7 +56,7 @@ impl<'input> Lexer<'input> {
     }
 
     fn skip_char(&mut self) {
-        assert!(!self.is_eof());
+        assert!(!self.is_eof(), "skipped char while being in EOF position");
 
         let x = self.parse_point.position;
         self.parse_point.position += 1;
@@ -86,6 +86,7 @@ impl<'input> Lexer<'input> {
                 return false;
             };
 
+            // SAFETY: we checked that ptr < prefix.len()
             if x != prefix.chars().nth(ptr).unwrap() {
                 self.parse_point = saved_point;
                 return false;

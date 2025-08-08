@@ -17,6 +17,7 @@ fn validate_fn(func: &Fn<'_>, slt: &NavigableSlt<'_, '_>) -> usize {
     let mut err_cpt = 0;
 
     for stmt in &func.stmts {
+        #[allow(clippy::single_match)]
         match stmt {
             Stmt::FnCall { id, args } => {
                 let Some(called_func) = slt.find_func(id) else {

@@ -120,7 +120,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
 
         let allocated_stack_size = crate::math::align_bytes(slt.variables.len() * 8, 16);
 
-        if slt.variables.len() > 0 {
+        if !slt.variables.is_empty() {
             // Allocate variables on the stack and store them
             let reg_args = func.variadic.unwrap_or(if func.args.len() > 7 {
                 7
@@ -168,7 +168,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             self.generate_stmt(stmt, slt, childs)?;
         }
 
-        if slt.variables.len() > 0 {
+        if !slt.variables.is_empty() {
             map_err! {
                 write!(self.writer, "    // pop the stack (deallocating {} variables)\n", slt.variables.len());
                 write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x}\n");

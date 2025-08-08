@@ -9,7 +9,7 @@ impl Files {
 
         create_garbage_base(&garbage_path)?;
 
-        let output_stem = get_file_stem(output_file).expect("invalid o path");
+        let output_stem = get_file_stem(output_file)?;
         let g_path = std::path::Path::new(&garbage_path);
         let output_path = g_path.join(format!("{output_stem}.s")).into_os_string();
         let object_path = g_path.join(format!("{output_stem}.o")).into_os_string();

@@ -27,7 +27,9 @@ impl<'prog> Cmd<'prog> {
         }
 
         if self.inner.is_empty() {
-            todo!("error in case the command is incomplete");
+            error!("CMD: command is empty");
+            let kind = error::ErrorKind::EmptyCmd;
+            return Err(new_error!(kind));
         }
 
         // Create the command and run it, with the previous check the first unwrap will never fail

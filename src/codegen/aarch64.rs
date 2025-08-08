@@ -246,6 +246,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             map_err! {
                 write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
                 write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
+                write!(self.writer, "\n");
             }
 
             let mut arg_offset = 0;
@@ -311,10 +312,29 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             ID(id) => {
                 // TODO: handle this unwrap
                 let var = slt.find_variable(id).unwrap();
+                let diff = slt.scope - var.scope;
+
+                map_err! {
+                    write!(self.writer, "    mov x9, x29\n");
+                }
+
+                if diff > 0 {
+                    map_err! {
+                        write!(self.writer, "    // climb up the stack calls to get to {} scope\n", id);
+                    }
+                }
+
+                for _ in 0..diff {
+                    map_err! {
+                        write!(self.writer, "    ldr x9, [x29]\n");
+                    }
+                }
+
+                self.write_newline()?;
 
                 map_err! {
                     write!(self.writer, "    // load var {} into x8\n", id);
-                    write!(self.writer, "    ldr x8, [x29, -{:#02x}]\n", var.offset * 8);
+                    write!(self.writer, "    ldr x8, [x9, -{:#02x}]\n", var.offset * 8);
                     write!(self.writer, "\n")
                 }
             }

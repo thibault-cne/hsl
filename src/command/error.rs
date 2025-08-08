@@ -8,6 +8,7 @@ pub struct Error {
 }
 
 pub enum ErrorKind {
+    EmptyCmd,
     CmdFailure { cmd: String, code: Option<i32> },
     Io(std::io::Error),
 }
@@ -67,6 +68,7 @@ impl fmt::Display for ErrorKind {
                     write!(f, "cmd failure: process {cmd} terminated by signal")
                 }
             }
+            EmptyCmd => write!(f, "cmd empty"),
         }
     }
 }

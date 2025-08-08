@@ -15,10 +15,13 @@ pub struct Compiler<'prog> {
 impl<'prog> Compiler<'prog> {
     pub fn new(arena: &'prog Arena<'prog>, flags: Flags<'prog>) -> Option<Self> {
         if flags.source_files.is_empty() {
-            todo!()
+            error!("no source files specified, please at least specify one source file");
+            eprint!("{}", flags.help_string());
+            return None;
         }
 
         let Some(target) = flags.target_name.and_then(crate::target::Target::by_name) else {
+            error!("invalid target used please specify a valid target");
             eprint!("{}", flags.help_string());
             return None;
         };

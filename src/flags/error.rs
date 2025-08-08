@@ -52,14 +52,14 @@ impl core::fmt::Display for FlagsError {
                         "bad argument for flags {}, expected necessary values in [{}] and got {}",
                         arg.long,
                         val.join(","),
-                        got.to_str().unwrap_or("")
+                        got.to_str().unwrap_or("(invalid argument given)")
                     ),
                     TakesValue::Optional(Some(val)) => writeln!(
                         f,
                         "bad argument for flags {}, expected necessary values in [{}] and got {}",
                         arg.long,
                         val.join(","),
-                        got.to_str().unwrap_or("")
+                        got.to_str().unwrap_or("(invalid argument given)")
                     ),
                     _ => Ok(()),
                 }

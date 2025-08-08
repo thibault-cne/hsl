@@ -12,24 +12,34 @@ where
         &mut self,
         _slt_builder: &mut Builder,
         slt: &mut SymbolLookupTable<'prog>,
-    ) -> Stmt<'prog> {
+    ) -> Option<Stmt<'prog>> {
         let Some(kind) = self.peek() else {
-            panic!("Expected a statement and found nothing");
+            error!("Expected a statement and found nothing");
+            self.err_cpt += 1;
+            return None;
         };
 
         match kind {
             T![Let] => {
-                self.consume(T![Let]);
-                let ident = self.next().expect("Expected an identifier after `let`");
-                assert_eq!(
-                    ident.kind,
-                    T![ID],
-                    "Expected identifier after `let`, but found `{}`",
-                    ident.kind
-                );
+                self.consume(T![Let])?;
+                let Some(ident) = self.next() else {
+                    error!("expected identifier after `let` but found nothing");
+                    self.err_cpt += 1;
+                    return None;
+                };
+
+                if ident.kind != T![ID] {
+                    error!(
+                        "expected identifier after `let` but found {} instead",
+                        ident.kind
+                    );
+                    self.err_cpt += 1;
+                    return None;
+                }
+
                 let id = self.arena.strdup(self.text(ident));
-                self.consume(T![Assign]);
-                let value = self.expression();
+                self.consume(T![Assign])?;
+                let value = self.expression()?;
 
                 let res = match value {
                     Expr::Lit(Lit::Str(s)) => {
@@ -41,7 +51,11 @@ where
                     Expr::Lit(Lit::Bool(b)) => {
                         slt.add_variable((id, Type::Val(InnerType::Bool), b), ident.span)
                     }
-                    _ => unreachable!(),
+                    _ => {
+                        error!("invalid expression found");
+                        self.err_cpt += 1;
+                        return None;
+                    }
                 };
 
                 if let Some((_, loc)) = res {
@@ -52,47 +66,60 @@ where
                     );
                 }
 
-                Stmt::Let { id, value }
+                Some(Stmt::Let { id, value })
             }
             T![OFnCall] => {
-                self.consume(T![OFnCall]);
-                let ident = self
-                    .next()
-                    .expect("Expected function identifier in fn call");
-                assert_eq!(
-                    ident.kind,
-                    T![ID],
-                    "Expected identifier after `fn call`, but found `{}`",
-                    ident.kind
-                );
+                self.consume(T![OFnCall])?;
+                let Some(ident) = self.next() else {
+                    error!("expected identifier after `fn_call` but found nothing");
+                    self.err_cpt += 1;
+                    return None;
+                };
+
+                if ident.kind != T![ID] {
+                    error!(
+                        "expected identifier after `fn_call` but found {} instead",
+                        ident.kind
+                    );
+                    self.err_cpt += 1;
+                    return None;
+                }
                 let id = self.arena.strdup(self.text(ident));
 
                 let mut args = Vec::new();
                 while !self.check_next(T![CFnCall]) {
-                    args.push(self.expression());
+                    args.push(self.expression()?);
                 }
 
-                self.consume(T![CFnCall]);
-                Stmt::FnCall { id, args }
+                self.consume(T![CFnCall])?;
+                Some(Stmt::FnCall { id, args })
             }
             T![OAssign] => {
-                self.consume(T![OAssign]);
-                let ident = self.next().expect("Expected an identifier after `assign`");
-                assert_eq!(
-                    ident.kind,
-                    T![ID],
-                    "Expected identifier after `assign`, but found `{}`",
-                    ident.kind
-                );
+                self.consume(T![OAssign])?;
+                let Some(ident) = self.next() else {
+                    error!("expected identifier after `assign` but found nothing");
+                    self.err_cpt += 1;
+                    return None;
+                };
+
+                if ident.kind != T![ID] {
+                    error!(
+                        "expected identifier after `assign` but found {} instead",
+                        ident.kind
+                    );
+                    self.err_cpt += 1;
+                    return None;
+                }
+
                 let id = self.arena.strdup(self.text(ident));
 
                 let mut ops = Vec::new();
                 while !self.check_next(T![CAssign]) {
-                    ops.push(self.unary_op());
+                    ops.push(self.unary_op()?);
                 }
 
-                self.consume(T![CAssign]);
-                Stmt::Assign { id, ops }
+                self.consume(T![CAssign])?;
+                Some(Stmt::Assign { id, ops })
             }
             //T![if] => {
             //    self.consume(T![if]);
@@ -124,37 +151,49 @@ where
             //        else_stmt,
             //    }
             //}
-            kind => panic!("Unknown start of expression: `{kind}`"),
+            kind => {
+                error!("unknown start of statement: `{kind}`");
+                self.err_cpt += 1;
+                None
+            }
         }
     }
 
-    fn unary_op(&mut self) -> Unop<'prog> {
+    fn unary_op(&mut self) -> Option<Unop<'prog>> {
         let Some(kind) = self.peek() else {
-            panic!("Expected an unary operator and found nothing");
+            error!("expected an unary operator and found nothing");
+            self.err_cpt += 1;
+            return None;
         };
 
-        match kind {
+        let unop = match kind {
             T![Plus] => Unop {
                 op: crate::ir::Op::Add,
-                value: self.expression(),
+                value: self.expression()?,
             },
             T![Minus] => Unop {
                 op: crate::ir::Op::Sub,
-                value: self.expression(),
+                value: self.expression()?,
             },
             T![Div] => Unop {
                 op: crate::ir::Op::Div,
-                value: self.expression(),
+                value: self.expression()?,
             },
             T![Mul] => Unop {
                 op: crate::ir::Op::Mul,
-                value: self.expression(),
+                value: self.expression()?,
             },
             T![Mod] => Unop {
                 op: crate::ir::Op::Mod,
-                value: self.expression(),
+                value: self.expression()?,
             },
-            kind => panic!("Unknown start of unary operator: `{kind}`"),
-        }
+            kind => {
+                error!("unknown start of unary operator: `{kind}`");
+                self.err_cpt += 1;
+                return None;
+            }
+        };
+
+        Some(unop)
     }
 }

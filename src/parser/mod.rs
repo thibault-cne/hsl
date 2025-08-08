@@ -76,21 +76,30 @@ where
     /// # Panics
     /// This panics if the consumed token don't have the same kind as `expected`
     /// or if there is no more tokens to consume.
-    pub(crate) fn consume(&mut self, expected: TokenKind) {
-        let token = self.next().unwrap_or_else(|| {
-            panic!("Expected to consume `{expected}`, but there was no next token.")
-        });
-        assert_eq!(
-            token.kind, expected,
-            "Expected to consume `{}`, but found `{}` instead",
-            expected, token.kind
-        );
+    pub(crate) fn consume(&mut self, expected: TokenKind) -> Option<()> {
+        let Some(token) = self.next() else {
+            error!("expected to consume `{expected}`, but there was no next token.");
+            self.err_cpt += 1;
+            return None;
+        };
+
+        if token.kind != expected {
+            error!(
+                "expected to consume `{expected}`, but found `{}` instead",
+                token.kind
+            );
+            self.err_cpt += 1;
+            return None;
+        }
 
         match token.kind {
             T![ID] => self.id = self.text(token),
+            // SAFETY: this is guarented to work thanks to the lexer
             T![IntLit] => self.integer = self.text(token).parse().unwrap(),
             _ => (),
         }
+
+        Some(())
     }
 
     pub(crate) fn parse(
@@ -98,27 +107,28 @@ where
         program: &mut Program<'prog>,
         slt_builder: &mut Builder,
         slt: &mut SymbolLookupTable<'prog>,
-    ) {
+    ) -> Option<()> {
         while !self.check_next(T![EOF]) {
             // SAFETY: this is safe since the while loop is still looping
             match self.peek().unwrap() {
-                T![OFnDecl1] => program.func.push(self.parse_function(slt_builder, slt)),
-                T![OExtrnFn] => program.extrn.push(self.parse_extrn_function(slt)),
+                T![OFnDecl1] => program.func.push(self.parse_function(slt_builder, slt)?),
+                T![OExtrnFn] => program.extrn.push(self.parse_extrn_function(slt)?),
                 _ => todo!("handle unexpected token"),
             }
         }
-        self.consume(T![EOF]);
+        self.consume(T![EOF])?;
+        Some(())
     }
 
-    fn parse_extrn_function(&mut self, slt: &mut SymbolLookupTable<'prog>) -> Extrn<'prog> {
-        self.consume(T![OExtrnFn]);
+    fn parse_extrn_function(&mut self, slt: &mut SymbolLookupTable<'prog>) -> Option<Extrn<'prog>> {
+        self.consume(T![OExtrnFn])?;
 
-        self.consume(T![ID]);
+        self.consume(T![ID])?;
         let id = self.arena.strdup(self.id);
 
         let variadic = if self.check_next(T![Variadic]) {
-            self.consume(T![Variadic]);
-            self.consume(T![IntLit]);
+            self.consume(T![Variadic])?;
+            self.consume(T![IntLit])?;
 
             Some(self.integer)
         } else {
@@ -128,20 +138,25 @@ where
         let mut args = Vec::new();
         while !self.check_next(T![CExtrnFn]) {
             let Some(kind) = self.peek() else {
-                panic!("expected type token in function params");
+                error!("expected type token in function params");
+                return None;
             };
 
             let ty = match kind {
                 T![TyInt] => Type::Val(InnerType::Int),
                 T![TyString] => Type::Val(InnerType::Str),
                 T![TyBool] => Type::Val(InnerType::Bool),
-                _ => panic!("unexpected token for type"),
+                _ => {
+                    error!("unexpected token for type");
+                    self.err_cpt += 1;
+                    return None;
+                }
             };
-            self.consume(kind);
+            self.consume(kind)?;
             args.push(ty);
         }
 
-        self.consume(T![CExtrnFn]);
+        self.consume(T![CExtrnFn])?;
 
         if let Some(variadic) = variadic {
             if args.len() != variadic {
@@ -155,19 +170,19 @@ where
         let extrn = Extrn { id, variadic, args };
         slt.add_function(&extrn, self.span);
 
-        extrn
+        Some(extrn)
     }
 
     fn parse_function(
         &mut self,
         slt_builder: &mut Builder,
         slt: &mut SymbolLookupTable<'prog>,
-    ) -> Fn<'prog> {
+    ) -> Option<Fn<'prog>> {
         slt_builder.new_region(slt);
         let child_mut = slt.last_children_mut().unwrap();
 
-        self.consume(T![OFnDecl1]);
-        self.consume(T![ID]);
+        self.consume(T![OFnDecl1])?;
+        self.consume(T![ID])?;
 
         if self.id == "galaxy" {
             self.has_main = true;
@@ -175,27 +190,33 @@ where
 
         let id = self.arena.strdup(self.id);
 
-        self.consume(T![OFnDecl2]);
+        self.consume(T![OFnDecl2])?;
 
         // Collect function parameters
         let mut args = Vec::new();
         if self.check_next(T![OFnParams]) {
-            self.consume(T![OFnParams]);
+            self.consume(T![OFnParams])?;
 
             while !self.check_next(T![CFnParams]) {
                 let Some(kind) = self.peek() else {
-                    panic!("expected type token in function params");
+                    error!("expected type token in function params");
+                    self.err_cpt += 1;
+                    return None;
                 };
 
                 let ty = match kind {
                     T![TyInt] => Type::Val(InnerType::Int),
                     T![TyString] => Type::Val(InnerType::Str),
                     T![TyBool] => Type::Val(InnerType::Bool),
-                    _ => panic!("unexpected token for type"),
+                    _ => {
+                        error!("unexpected token for type");
+                        self.err_cpt += 1;
+                        return None;
+                    }
                 };
-                self.consume(kind);
+                self.consume(kind)?;
 
-                self.consume(T![ID]);
+                self.consume(T![ID])?;
 
                 let id = self.arena.strdup(self.id);
 
@@ -203,16 +224,17 @@ where
                 child_mut.add_variable((id, ty), self.span);
             }
 
-            self.consume(T![CFnParams]);
+            self.consume(T![CFnParams])?;
         }
 
+        // TODO: handle variadic functions
         let variadic = if self.check_next(T![Variadic]) {
-            self.consume(T![Variadic]);
+            self.consume(T![Variadic])?;
             if !self.check_next(T![IntLit]) {
                 todo!("handle non integer variadic");
             }
-            let tok = self.next().unwrap();
-            let _variadic: usize = self.text(tok).parse().unwrap();
+            let tok = self.next()?;
+            let _variadic: usize = self.text(tok).parse().ok()?;
 
             todo!("handle the variadic functions")
         } else {
@@ -221,10 +243,10 @@ where
 
         let mut stmts = Vec::new();
         while !self.check_next(T![CFnDecl]) {
-            stmts.push(self.statement(slt_builder, child_mut));
+            stmts.push(self.statement(slt_builder, child_mut)?);
         }
 
-        self.consume(T![CFnDecl]);
+        self.consume(T![CFnDecl])?;
 
         let func = Fn {
             id,
@@ -235,6 +257,6 @@ where
 
         slt.add_function(&func, self.span);
 
-        func
+        Some(func)
     }
 }

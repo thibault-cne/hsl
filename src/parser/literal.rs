@@ -7,39 +7,50 @@ impl<'input, 'prog, I> Parser<'input, 'prog, I>
 where
     I: Iterator<Item = Token>,
 {
-    pub fn literal(&mut self) -> Lit<'prog> {
+    pub fn literal(&mut self) -> Option<Lit<'prog>> {
         let Some(kind) = self.peek() else {
-            panic!("expected a literal but got nothing");
+            error!("expected a literal but got nothing");
+            self.err_cpt += 1;
+            return None;
         };
 
         match kind {
             T![String] => {
+                // SAFETY: this is safe because we peeked the token before
                 let tok = self.next().unwrap();
                 let str = self.text(tok);
                 let str = &str[1..(str.len() - 1)];
-                Lit::Str(self.arena.strdup(str))
+                Some(Lit::Str(self.arena.strdup(str)))
             }
             T![Not] => {
-                self.consume(T![Not]);
-                self.check_next(T![IntLit]);
+                self.consume(T![Not])?;
+
+                if !self.check_next(T![IntLit]) {
+                    error!("expected `IntLit` after `Not`");
+                    self.err_cpt += 1;
+                    return None;
+                }
+
+                // SAFETY: this is safe because we checked the token before
                 let tok = self.next().unwrap();
                 let str = self.text(tok);
-                Lit::Int(
-                    -str.parse::<i64>()
-                        .unwrap_or_else(|_| panic!("invalid negative integer literal: `{str}`")),
-                )
+                // SAFETY: this is safe of the lexer
+                Some(Lit::Int(-str.parse::<i64>().unwrap()))
             }
             T![IntLit] => {
+                // SAFETY: this is safe because we peeked the token before
                 let tok = self.next().unwrap();
                 let str = self.text(tok);
-                Lit::Int(
-                    str.parse()
-                        .unwrap_or_else(|_| panic!("invalid integer literal: `{str}`")),
-                )
+                // SAFETY: this is safe of the lexer
+                Some(Lit::Int(str.parse().unwrap()))
             }
-            T![True] => Lit::Bool(true),
-            T![False] => Lit::Bool(false),
-            kind => panic!("Unknown start of expression: `{kind}`"),
+            T![True] => Some(Lit::Bool(true)),
+            T![False] => Some(Lit::Bool(false)),
+            kind => {
+                error!("unknown start of expression: `{kind}`");
+                self.err_cpt += 1;
+                None
+            }
         }
     }
 }

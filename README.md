@@ -36,10 +36,15 @@ For now HSL only compiles to _ARMv8_. The objective in the long term is to compi
 You can find a bunch of examples in the `examples` folder. Here an example of a `Hello World!` program:
 
 
-```
-A long time ago in a galaxy far, far away...            <(-.-)> Start of a function called galaxy (this is the name of the `main` function)
-    Execute order printf                                <(-.-)> Call the printf function with only a string literal
-      "Hello World!"
-    Order executed
-May the force be with you.                              <(-.-)> End of the program
+```hsl
+Hypersignal printf Starfield 1                <(-.-)> Declare the external function printf with one string argument and variadcs 
+  Holotext
+Jamsignal                                     <(-.-)> End the declaration of extern function
+
+A long time ago in a galaxy far, far away...  <(-.-)> Start of a function called galaxy (this is the name of the `main` function)
+  Execute order printf                        <(-.-)> Call the printf function with only a string literal
+    "Hello World!\n"
+  Order executed
+May the force be with you.                    <(-.-)> End of the galaxy (main) function
+
 ```

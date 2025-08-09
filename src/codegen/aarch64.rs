@@ -39,35 +39,35 @@ impl<'prog, W: io::Write> codegen::Codegen<'prog> for Codegen<'prog, W> {
         childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
         cmd: &mut crate::command::Cmd<'prog>,
     ) -> codegen::error::Result<()> {
-        map_err! {
-            write!(self.writer, ".global _main\n.p2align 4\n_main:\n");
-            write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
-            write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
-            write!(self.writer, "    mov x29, sp\n");
-            write!(self.writer, "\n");
-            write!(self.writer, "    // jump to the main function\n");
-            write!(self.writer, "    bl _galaxy\n");
-            write!(self.writer, "\n");
-            write!(self.writer, "    // load return address and previous stack pointer\n");
-            write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
-            write!(self.writer, "    mov x0, #0\n");
-            write!(self.writer, "    ret\n");
-            write!(self.writer, "\n");
-        };
+        gen_write!(self.writer, ".global _main\n.p2align 4\n_main:\n")?;
+        gen_write!(
+            self.writer,
+            "    // load link register and previous stack pointer onto the stack\n"
+        )?;
+        gen_write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n")?;
+        gen_write!(self.writer, "    mov x29, sp\n")?;
+        gen_write!(self.writer, "\n")?;
+        gen_write!(self.writer, "    // jump to the main function\n")?;
+        gen_write!(self.writer, "    bl _galaxy\n")?;
+        gen_write!(self.writer, "\n")?;
+        gen_write!(
+            self.writer,
+            "    // load return address and previous stack pointer\n"
+        )?;
+        gen_write!(self.writer, "    ldp x29, lr, [sp], 0x10\n")?;
+        gen_write!(self.writer, "    mov x0, #0\n")?;
+        gen_write!(self.writer, "    ret\n")?;
+        gen_write!(self.writer, "\n")?;
 
         for (func, slt) in program.func.iter().zip(childs) {
             let mut childs = slt.childs();
             self.generate_fn_decl(func, &slt, &mut childs)?;
         }
 
-        map_err! {
-            write!(self.writer, ".data\n");
-        }
+        gen_write!(self.writer, ".data\n")?;
 
         for (name, s) in self.string_literals.iter() {
-            map_err! {
-                write!(self.writer, "    {}:\n        .asciz \"{}\"\n", name, s);
-            }
+            gen_write!(self.writer, "    {}:\n        .asciz \"{}\"\n", name, s)?;
         }
 
         // Ensures that the writer has been flushed
@@ -109,14 +109,15 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         // TODO: handle the stack for function call
-        map_err! {
-            write!(self.writer, ".global _{}\n.p2align 4\n", func.id);
-            write!(self.writer, "_{}:\n", func.id);
-            write!(self.writer, "    // load link register and previous stack pointer onto the stack\n");
-            write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n");
-            write!(self.writer, "    mov x29, sp\n");
-            write!(self.writer, "\n");
-        }
+        gen_write!(self.writer, ".global _{}\n.p2align 4\n", func.id)?;
+        gen_write!(self.writer, "_{}:\n", func.id)?;
+        gen_write!(
+            self.writer,
+            "    // load link register and previous stack pointer onto the stack\n"
+        )?;
+        gen_write!(self.writer, "    stp x29, lr, [sp, -0x10]!\n")?;
+        gen_write!(self.writer, "    mov x29, sp\n")?;
+        gen_write!(self.writer, "\n")?;
 
         let allocated_stack_size = crate::math::align_bytes(slt.variables.len() * 8, 16);
 
@@ -132,33 +133,40 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             let allocated_args_space = crate::math::align_bytes(func.args.len() * 8, 16);
             let mut arg_index = 0;
 
-            map_err! {
-                write!(self.writer, "    // core {} function\n", func.id);
-                write!(self.writer, "    // allocate needed stack space for {} arguments\n", func.id);
-                write!(self.writer, "    add sp, sp, -{allocated_stack_size:#02x}\n");
-            }
+            gen_write!(self.writer, "    // core {} function\n", func.id)?;
+            gen_write!(
+                self.writer,
+                "    // allocate needed stack space for {} arguments\n",
+                func.id
+            )?;
+            gen_write!(
+                self.writer,
+                "    add sp, sp, -{allocated_stack_size:#02x}\n"
+            )?;
 
             self.write_newline()?;
 
-            map_err! {
-                write!(self.writer, "    // load {} arguments onto the stack\n", func.id);
-            }
+            gen_write!(
+                self.writer,
+                "    // load {} arguments onto the stack\n",
+                func.id
+            )?;
 
             for i in 0..reg_args {
                 arg_index += 1;
-                map_err! {
-                    write!(self.writer, "    str x{i}, [x29, -{:#02x}]\n", arg_index * 8);
-                }
+                gen_write!(
+                    self.writer,
+                    "    str x{i}, [x29, -{:#02x}]\n",
+                    arg_index * 8
+                )?;
             }
 
             for i in 0..stack_args {
                 let var_offset = allocated_args_space + 2 + i;
                 arg_index += 1;
 
-                map_err! {
-                    write!(self.writer, "    ldr x8, [x29, -{var_offset:#02x}]\n");
-                    write!(self.writer, "    str x8, [x29, -{:#02x}]\n", arg_index * 8);
-                }
+                gen_write!(self.writer, "    ldr x8, [x29, -{var_offset:#02x}]\n")?;
+                gen_write!(self.writer, "    str x8, [x29, -{:#02x}]\n", arg_index * 8)?;
             }
 
             self.write_newline()?;
@@ -169,19 +177,22 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         }
 
         if !slt.variables.is_empty() {
-            map_err! {
-                write!(self.writer, "    // pop the stack (deallocating {} variables)\n", slt.variables.len());
-                write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x}\n");
-                write!(self.writer, "\n");
-            }
+            gen_write!(
+                self.writer,
+                "    // pop the stack (deallocating {} variables)\n",
+                slt.variables.len()
+            )?;
+            gen_write!(self.writer, "    add sp, sp, {allocated_stack_size:#02x}\n")?;
+            gen_write!(self.writer, "\n")?;
         }
 
-        map_err! {
-            write!(self.writer, "    // load return address and previous stack pointer\n");
-            write!(self.writer, "    ldp x29, lr, [sp], 0x10\n");
-            write!(self.writer, "    ret\n");
-            write!(self.writer, "\n")
-        }
+        gen_write!(
+            self.writer,
+            "    // load return address and previous stack pointer\n"
+        )?;
+        gen_write!(self.writer, "    ldp x29, lr, [sp], 0x10\n")?;
+        gen_write!(self.writer, "    ret\n")?;
+        gen_write!(self.writer, "\n")
     }
 
     fn generate_expr<'a>(
@@ -208,70 +219,63 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
 
         // This is for macosX variadic are passes onto the stack and other arguments are passed
         // using registers x0 to x7
-        assert!(
-            variadic <= Some(args.len()),
-            "make sure variadic is smaller than args len"
-        );
         let reg_args = variadic.unwrap_or(if args.len() > 7 { 7 } else { args.len() });
         let stack_args = args.len() - reg_args;
 
         let allocated_space = crate::math::align_bytes(stack_args * 8, 16);
 
-        map_err! {
-            write!(self.writer, "    // calling {id} function\n");
-        }
+        gen_write!(self.writer, "    // calling {id} function\n")?;
 
         if reg_args > 0 {
-            map_err! {
-                write!(self.writer, "    // load {} arguments onto the associated registers\n", id);
-                write!(self.writer, "\n");
-            }
+            gen_write!(
+                self.writer,
+                "    // load {} arguments onto the associated registers\n",
+                id
+            )?;
+            gen_write!(self.writer, "\n")?;
 
             for (i, arg) in args.iter().enumerate().take(reg_args) {
                 self.generate_arg(arg, slt)?;
 
-                map_err! {
-                    // Load the argument onto the associated register
-                    write!(self.writer, "    // load fn arguments onto x{i}\n");
-                    write!(self.writer, "    mov x{i}, x8\n");
-                    write!(self.writer, "\n");
-                }
+                // Load the argument onto the associated register
+                gen_write!(self.writer, "    // load fn arguments onto x{i}\n")?;
+                gen_write!(self.writer, "    mov x{i}, x8\n")?;
+                gen_write!(self.writer, "\n")?;
             }
         }
 
         if stack_args > 0 {
-            map_err! {
-                write!(self.writer, "    // allocate needed stack space for {id} arguments\n");
-                write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n");
-                write!(self.writer, "\n");
-            }
+            gen_write!(
+                self.writer,
+                "    // allocate needed stack space for {id} arguments\n"
+            )?;
+            gen_write!(self.writer, "    str x8, [sp, -{allocated_space:#02x}]!\n")?;
+            gen_write!(self.writer, "\n")?;
 
             let mut arg_offset = 0;
             for i in 0..stack_args {
                 self.generate_arg(&args[reg_args + i], slt)?;
 
-                map_err! {
-                    // Load the argument onto the stack for fn call
-                    write!(self.writer, "    // load x8 onto the stack\n");
-                    write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n");
-                    write!(self.writer, "\n");
-                }
+                // Load the argument onto the stack for fn call
+                gen_write!(self.writer, "    // load x8 onto the stack\n")?;
+                gen_write!(self.writer, "    str x8, [sp, {arg_offset:#02x}]\n")?;
+                gen_write!(self.writer, "\n")?;
+
                 arg_offset += 8;
             }
         }
 
-        map_err! {
-            write!(self.writer, "    // jump to the function\n");
-            write!(self.writer, "    bl _{id}\n");
-            write!(self.writer, "\n");
-        }
+        gen_write!(self.writer, "    // jump to the function\n")?;
+        gen_write!(self.writer, "    bl _{id}\n")?;
+        gen_write!(self.writer, "\n")?;
 
         if stack_args > 0 {
-            map_err! {
-                write!(self.writer, "    // pop from the stack the {id} function arguments\n");
-                write!(self.writer, "    add sp, sp, {allocated_space:#02x}\n");
-                write!(self.writer, "\n");
-            }
+            gen_write!(
+                self.writer,
+                "    // pop from the stack the {id} function arguments\n"
+            )?;
+            gen_write!(self.writer, "    add sp, sp, {allocated_space:#02x}\n")?;
+            gen_write!(self.writer, "\n")?;
         }
 
         Ok(())
@@ -286,12 +290,16 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         self.curr_var_id = Some(id);
         // Value is loaded inside the x8 register we need to store it on the stack
         self.generate_arg(value, slt)?;
-        let var = slt.get_variable(id).expect("cannot find variable");
+        // SAFETY: this is safe because of the parser (the variable has been pushed to the slt)
+        let var = slt.get_variable(id).unwrap();
 
-        map_err! {
-            write!(self.writer, "    // pushing x8 (variable {} to the stack)\n", self.curr_var_id.unwrap());
-            write!(self.writer, "    str x8, [x29, -{:#02x}]\n", var.offset * 8);
-        }
+        gen_write!(
+            self.writer,
+            "    // pushing x8 (variable {} to the stack)\n",
+            // SAFETY: this is safe because we just populated self.curr_var_id
+            self.curr_var_id.unwrap()
+        )?;
+        gen_write!(self.writer, "    str x8, [x29, -{:#02x}]\n", var.offset * 8)?;
 
         self.curr_var_id = None;
         self.write_newline()
@@ -307,33 +315,29 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         match expr {
             Lit(lit) => self.generate_lit(lit),
             Id(id) => {
-                // TODO: handle this unwrap
+                // SAFETY: this is safe because of the semantic controls
                 let var = slt.find_variable(id).unwrap();
                 let diff = slt.scope - var.scope;
 
-                map_err! {
-                    write!(self.writer, "    mov x9, x29\n");
-                }
+                gen_write!(self.writer, "    mov x9, x29\n")?;
 
                 if diff > 0 {
-                    map_err! {
-                        write!(self.writer, "    // climb up the stack calls to get to {} scope\n", id);
-                    }
+                    gen_write!(
+                        self.writer,
+                        "    // climb up the stack calls to get to {} scope\n",
+                        id
+                    )?;
                 }
 
                 for _ in 0..diff {
-                    map_err! {
-                        write!(self.writer, "    ldr x9, [x29]\n");
-                    }
+                    gen_write!(self.writer, "    ldr x9, [x29]\n")?;
                 }
 
                 self.write_newline()?;
 
-                map_err! {
-                    write!(self.writer, "    // load var {} into x8\n", id);
-                    write!(self.writer, "    ldr x8, [x9, -{:#02x}]\n", var.offset * 8);
-                    write!(self.writer, "\n")
-                }
+                gen_write!(self.writer, "    // load var {} into x8\n", id)?;
+                gen_write!(self.writer, "    ldr x8, [x9, -{:#02x}]\n", var.offset * 8)?;
+                gen_write!(self.writer, "\n")
             }
         }
     }
@@ -341,23 +345,16 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     fn generate_lit(&mut self, lit: &'prog Lit) -> codegen::error::Result<()> {
         use Lit::*;
 
-        let curr_id = self
-            .curr_var_id
-            .or_else(|| {
-                self.fmt_str_cpt += 1;
-                Some(
-                    self.arena
-                        .strdup(format!("__lit_{}", self.fmt_str_cpt).as_str()),
-                )
-            })
-            .unwrap();
+        let curr_id = self.curr_var_id.unwrap_or_else(|| {
+            self.fmt_str_cpt += 1;
+            self.arena
+                .strdup(format!("__lit_{}", self.fmt_str_cpt).as_str())
+        });
 
         match lit {
             Int(val) => {
-                map_err! {
-                    write!(self.writer, "    // pushing variable {} to x8\n", curr_id);
-                    write!(self.writer, "    mov x8, #{}\n", val);
-                }
+                gen_write!(self.writer, "    // pushing variable {} to x8\n", curr_id)?;
+                gen_write!(self.writer, "    mov x8, #{}\n", val)?;
             }
             Str(s) => {
                 // Check if a similar string literal has already been pushed so we avoid duping items
@@ -373,17 +370,17 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
                     curr_id
                 };
 
-                map_err! {
-                    write!(self.writer, "    // pushing variable {} to x8\n", lit_str_id);
-                    write!(self.writer, "    adrp x8, {}@PAGE\n", lit_str_id);
-                    write!(self.writer, "    add x8, x8, {}@PAGEOFF\n", lit_str_id);
-                }
+                gen_write!(
+                    self.writer,
+                    "    // pushing variable {} to x8\n",
+                    lit_str_id
+                )?;
+                gen_write!(self.writer, "    adrp x8, {}@PAGE\n", lit_str_id)?;
+                gen_write!(self.writer, "    add x8, x8, {}@PAGEOFF\n", lit_str_id)?;
             }
             Bool(b) => {
-                map_err! {
-                    write!(self.writer, "    // pushing variable {} to x8\n", curr_id);
-                    write!(self.writer, "    mov x8, #{}\n", *b as u8);
-                }
+                gen_write!(self.writer, "    // pushing variable {} to x8\n", curr_id)?;
+                gen_write!(self.writer, "    mov x8, #{}\n", *b as u8)?;
             }
         }
 
@@ -391,8 +388,6 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
     }
 
     fn write_newline(&mut self) -> codegen::error::Result<()> {
-        map_err! {
-            write!(self.writer, "\n")
-        }
+        gen_write!(self.writer, "\n")
     }
 }

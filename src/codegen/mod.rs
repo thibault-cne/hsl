@@ -5,6 +5,9 @@ use crate::parser::slt::{ChildIterator, NavigableSlt};
 #[macro_use]
 pub mod error;
 
+#[macro_use]
+mod macros;
+
 pub mod aarch64;
 
 pub trait Codegen<'prog> {

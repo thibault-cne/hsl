@@ -1,5 +1,13 @@
 # HyperSpace Lang (HSL)
 
+-----
+
+:warning: This repository is *deprecated* :warning:
+
+The HyperSpace compiler has been moved to [the main HyperSpace Lang repo](https://github.com/hs-lang/hsc).
+
+-----
+
 A Star Wars themed programming language with a compiler written in Rust.
 
 ## Introduction

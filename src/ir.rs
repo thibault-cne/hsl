@@ -21,7 +21,7 @@ pub struct Extrn<'prog> {
 
 pub struct Fn<'prog> {
     pub id: &'prog str,
-    pub stmts: Vec<Stmt<'prog>>,
+    pub body: Vec<Expr<'prog>>,
 
     // Tell if the function has a variadic parameter and if so the value of variadic is
     // the number of fixed parameters
@@ -52,33 +52,20 @@ pub enum InnerType {
     Bool,
 }
 
-pub enum Stmt<'prog> {
+pub enum Expr<'prog> {
     Let {
         id: &'prog str,
-        value: Expr<'prog>,
+        value: Arg<'prog>,
     },
     FnCall {
         id: &'prog str,
-        args: Vec<Expr<'prog>>,
-    },
-    Assign {
-        id: &'prog str,
-        ops: Vec<Unop<'prog>>,
+        args: Vec<Arg<'prog>>,
     },
 }
 
-pub struct Unop<'prog> {
-    pub value: Expr<'prog>,
-    pub op: Op,
-}
-
-pub enum Expr<'prog> {
-    FnCall {
-        id: &'prog str,
-        args: Vec<Expr<'prog>>,
-    },
+pub enum Arg<'prog> {
+    Id(&'prog str),
     Lit(Lit<'prog>),
-    ID(&'prog str),
 }
 
 pub enum Lit<'prog> {

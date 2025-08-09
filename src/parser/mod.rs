@@ -4,10 +4,10 @@ use crate::ir::{Extrn, Fn, InnerType, Program, Type};
 use crate::lexer::token::{Token, TokenKind};
 use crate::lexer::Lexer;
 
-pub mod expression;
-pub mod literal;
+mod arg;
+mod expression;
+mod literal;
 pub mod slt;
-pub mod statement;
 
 pub struct Parser<'input, 'prog, I>
 where
@@ -241,16 +241,16 @@ where
             None
         };
 
-        let mut stmts = Vec::new();
+        let mut body = Vec::new();
         while !self.check_next(T![CFnDecl]) {
-            stmts.push(self.statement(slt_builder, child_mut)?);
+            body.push(self.expression(slt_builder, child_mut)?);
         }
 
         self.consume(T![CFnDecl])?;
 
         let func = Fn {
             id,
-            stmts,
+            body,
             variadic,
             args,
         };

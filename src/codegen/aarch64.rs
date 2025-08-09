@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::codegen;
-use crate::ir::{Expr, Fn, Lit, Stmt};
+use crate::ir::{Arg, Expr, Fn, Lit};
 
 pub struct Codegen<'prog, W> {
     // Inputs
@@ -164,8 +164,8 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
             self.write_newline()?;
         }
 
-        for stmt in func.stmts.iter() {
-            self.generate_stmt(stmt, slt, childs)?;
+        for expr in func.body.iter() {
+            self.generate_expr(expr, slt, childs)?;
         }
 
         if !slt.variables.is_empty() {
@@ -184,27 +184,24 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         }
     }
 
-    fn generate_stmt<'a>(
+    fn generate_expr<'a>(
         &mut self,
-        stmt: &'prog Stmt,
+        stmt: &'prog Expr,
         slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
         _childs: &mut crate::parser::slt::ChildIterator<'a, 'prog>,
     ) -> codegen::error::Result<()> {
-        use Stmt::*;
+        use Expr::*;
 
         match stmt {
-            Let { id, value } => self.generate_let_stmt(id, value, slt),
+            Let { id, value } => self.generate_let(id, value, slt),
             FnCall { id, args } => self.generate_fn_call(id, args, slt),
-            Assign { .. } => {
-                todo!("implement assign stmt");
-            }
         }
     }
 
     fn generate_fn_call<'a>(
         &mut self,
         id: &'prog str,
-        args: &'prog [Expr],
+        args: &'prog [Arg],
         slt: &'a crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         let variadic = self.c.program.get_fn_variadic(id);
@@ -230,8 +227,8 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
                 write!(self.writer, "\n");
             }
 
-            for (i, expr) in args.iter().enumerate().take(reg_args) {
-                self.generate_expr(expr, slt)?;
+            for (i, arg) in args.iter().enumerate().take(reg_args) {
+                self.generate_arg(arg, slt)?;
 
                 map_err! {
                     // Load the argument onto the associated register
@@ -251,7 +248,7 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
 
             let mut arg_offset = 0;
             for i in 0..stack_args {
-                self.generate_expr(&args[reg_args + i], slt)?;
+                self.generate_arg(&args[reg_args + i], slt)?;
 
                 map_err! {
                     // Load the argument onto the stack for fn call
@@ -280,15 +277,15 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         Ok(())
     }
 
-    fn generate_let_stmt<'a>(
+    fn generate_let<'a>(
         &mut self,
         id: &'prog str,
-        value: &'prog Expr,
+        value: &'prog Arg,
         slt: &crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
         self.curr_var_id = Some(id);
         // Value is loaded inside the x8 register we need to store it on the stack
-        self.generate_expr(value, slt)?;
+        self.generate_arg(value, slt)?;
         let var = slt.get_variable(id).expect("cannot find variable");
 
         map_err! {
@@ -300,16 +297,16 @@ impl<'prog, W: io::Write> Codegen<'prog, W> {
         self.write_newline()
     }
 
-    fn generate_expr<'a>(
+    fn generate_arg<'a>(
         &mut self,
-        expr: &'prog Expr,
+        expr: &'prog Arg,
         slt: &crate::parser::slt::NavigableSlt<'a, 'prog>,
     ) -> codegen::error::Result<()> {
-        use Expr::*;
+        use Arg::*;
+
         match expr {
-            FnCall { id, args } => self.generate_fn_call(id, args, slt),
             Lit(lit) => self.generate_lit(lit),
-            ID(id) => {
+            Id(id) => {
                 // TODO: handle this unwrap
                 let var = slt.find_variable(id).unwrap();
                 let diff = slt.scope - var.scope;
